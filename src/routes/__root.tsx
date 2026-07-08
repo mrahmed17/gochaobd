@@ -1,5 +1,5 @@
 import "@fontsource/dm-serif-display/400.css";
-import "@fontsource-variable/manrope";
+import "@fontsource-variable/manrope/index.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
