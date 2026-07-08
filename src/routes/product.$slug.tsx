@@ -10,8 +10,8 @@ import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package } f
 
 export const Route = createFileRoute("/product/$slug")({
   head: ({ loaderData }) => {
-    if (!loaderData) return { meta: [{ title: "Product — GochaoBD" }] };
-    const p = loaderData.product;
+    const p = (loaderData as { product: { name: string; description: string | null; images: string[] } } | undefined)?.product;
+    if (!p) return { meta: [{ title: "Product — GochaoBD" }] };
     const img = resolveImage(p.images[0]);
     return {
       meta: [
