@@ -125,7 +125,7 @@ function ProductPage() {
               >
                 Add to cart
               </button>
-              <button onClick={() => cart.toggleWish(product.id)} className="h-12 w-12 grid place-items-center rounded-full border" aria-label="wishlist">
+              <button onClick={() => cart.toggleWish(product.id)} className="h-12 w-12 grid place-items-center rounded-full border" aria-label={cart.inWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}>
                 <Heart className={`h-5 w-5 ${cart.inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`} />
               </button>
             </div>
