@@ -5,7 +5,34 @@ import { ProductCard } from "@/components/ProductCard";
 import { categoriesQuery, productsQuery } from "@/lib/queries";
 
 export const Route = createFileRoute("/category/$slug")({
-  head: ({ params }) => ({ meta: [{ title: `${params.slug} — GochaoBD` }] }),
+  head: ({ params, loaderData }) => {
+    const cat = (loaderData as { cat: { name: string; slug: string } } | undefined)?.cat;
+    const name = cat?.name ?? params.slug;
+    const url = `https://gochaobd.lovable.app/category/${params.slug}`;
+    const desc = `Shop ${name} at GochaoBD — affordable home organizers with cash on delivery across Bangladesh.`;
+    return {
+      meta: [
+        { title: `${name} — GochaoBD` },
+        { name: "description", content: desc },
+        { property: "og:title", content: `${name} — GochaoBD` },
+        { property: "og:description", content: desc },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name,
+            url,
+            description: desc,
+          }),
+        },
+      ],
+    };
+  },
   component: CategoryPage,
   loader: async ({ context, params }) => {
     const cats = await context.queryClient.ensureQueryData(categoriesQuery());
