@@ -68,7 +68,8 @@ function Hero() {
             <Sparkles className="h-3 w-3" /> New season · Home organizers
           </div>
           <h1 className="mt-4 text-4xl md:text-6xl font-display leading-[1.05]">
-            A calmer home,<br />one shelf at a time.
+            <span className="sr-only">GochaoBD — Home organizers and kitchen essentials in Bangladesh. </span>
+            <span aria-hidden="true">A calmer home,<br />one shelf at a time.</span>
           </h1>
           <p className="mt-4 text-muted-foreground max-w-md">
             Thoughtfully designed organizers and kitchen essentials — delivered across Bangladesh.
