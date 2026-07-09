@@ -9,16 +9,42 @@ import { useCart } from "@/lib/cart";
 import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package } from "lucide-react";
 
 export const Route = createFileRoute("/product/$slug")({
-  head: ({ loaderData }) => {
-    const p = (loaderData as { product: { name: string; description: string | null; images: string[] } } | undefined)?.product;
-    if (!p) return { meta: [{ title: "Product — GochaoBD" }] };
+  head: ({ params, loaderData }) => {
+    const p = (loaderData as { product: { name: string; description: string | null; images: string[]; price_bdt: number; stock: number; rating: number; review_count: number } } | undefined)?.product;
+    const url = `https://gochaobd.lovable.app/product/${params.slug}`;
+    if (!p) return { meta: [{ title: "Product — GochaoBD" }], links: [{ rel: "canonical", href: url }] };
     const img = resolveImage(p.images[0]);
+    const desc = (p.description ?? `${p.name} — available at GochaoBD with cash on delivery across Bangladesh.`).slice(0, 160);
     return {
       meta: [
         { title: `${p.name} — GochaoBD` },
-        { name: "description", content: p.description ?? "" },
+        { name: "description", content: desc },
         { property: "og:title", content: p.name },
+        { property: "og:description", content: desc },
         { property: "og:image", content: img },
+        { property: "og:type", content: "product" },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: p.name,
+            image: img,
+            description: p.description ?? undefined,
+            aggregateRating: p.review_count > 0 ? { "@type": "AggregateRating", ratingValue: p.rating, reviewCount: p.review_count } : undefined,
+            offers: {
+              "@type": "Offer",
+              price: p.price_bdt,
+              priceCurrency: "BDT",
+              availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              url,
+            },
+          }),
+        },
       ],
     };
   },
