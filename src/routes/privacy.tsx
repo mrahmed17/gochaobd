@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Footer } from "@/components/AppShell";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Policy — GochaoBD" }] }),
+  head: () => ({
+    meta: [
+      { title: "Privacy Policy — GochaoBD" },
+      { name: "description", content: "How GochaoBD collects, uses and protects your personal information when you shop with us." },
+      { property: "og:title", content: "Privacy Policy — GochaoBD" },
+      { property: "og:description", content: "Our commitment to protecting customer data at GochaoBD." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/privacy" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/privacy" }],
+  }),
   component: () => (
     <AppShell>
       <div className="mx-auto max-w-3xl px-4 py-10 space-y-4 text-sm text-muted-foreground">
