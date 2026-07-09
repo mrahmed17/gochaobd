@@ -115,9 +115,9 @@ function ProductPage() {
 
             <div className="mt-5 flex items-center gap-3">
               <div className="inline-flex items-center rounded-full border">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="h-11 w-11 grid place-items-center" aria-label="decrement"><Minus className="h-4 w-4" /></button>
-                <span className="w-10 text-center font-medium">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} className="h-11 w-11 grid place-items-center" aria-label="increment"><Plus className="h-4 w-4" /></button>
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="h-11 w-11 grid place-items-center" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
+                <span className="w-10 text-center font-medium" aria-live="polite">{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className="h-11 w-11 grid place-items-center" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
               </div>
               <button
                 onClick={() => cart.add({ id: product.id, slug: product.slug, name: product.name, price, image: product.images[0] }, qty)}
