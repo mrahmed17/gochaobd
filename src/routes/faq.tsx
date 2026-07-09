@@ -10,8 +10,30 @@ const faqs = [
   { q: "Which payment methods do you accept?", a: "Cash on Delivery, bKash and Nagad." },
 ];
 export const Route = createFileRoute("/faq")({
-  head: () => ({ meta: [{ title: "FAQ — GochaoBD" }] }),
-  component: () => (
+  head: () => ({
+    meta: [
+      { title: "FAQ — GochaoBD" },
+      { name: "description", content: "Answers to common GochaoBD questions — delivery times, cash on delivery, returns, cancellations and payment methods in Bangladesh." },
+      { property: "og:title", content: "Frequently asked questions — GochaoBD" },
+      { property: "og:description", content: "Delivery, returns, COD, bKash and Nagad — everything you need to know before ordering." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/faq" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/faq" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }),
+      },
+    ],
+  }),
     <AppShell>
       <div className="mx-auto max-w-3xl px-4 py-10">
         <h1 className="font-display text-4xl">Frequently asked questions</h1>
