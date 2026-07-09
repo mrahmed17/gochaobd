@@ -10,10 +10,10 @@ import heroImg from "@/assets/hero-organizers.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "GochaoBD — Home Organizers in Bangladesh" },
-      { name: "description", content: "Beautiful, affordable home organizers, kitchen accessories and smart home essentials. Cash on delivery across Bangladesh." },
-      { property: "og:title", content: "GochaoBD — Home Organizers in Bangladesh" },
-      { property: "og:description", content: "Organize and beautify your home with thoughtfully designed products. COD available across Bangladesh." },
+      { title: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh" },
+      { name: "description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
+      { property: "og:title", content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh" },
+      { property: "og:description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
       { property: "og:url", content: "https://gochaobd.lovable.app/" },
     ],
     links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/" }],
