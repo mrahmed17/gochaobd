@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Footer } from "@/components/AppShell";
 
 export const Route = createFileRoute("/returns")({
-  head: () => ({ meta: [{ title: "Return & Refund Policy — GochaoBD" }] }),
+  head: () => ({
+    meta: [
+      { title: "Return & Refund Policy — GochaoBD" },
+      { name: "description", content: "GochaoBD 7-day returns policy — how to return, refund timelines, damaged item handling and non-returnable items." },
+      { property: "og:title", content: "Return & Refund Policy — GochaoBD" },
+      { property: "og:description", content: "Easy 7-day returns and refunds across Bangladesh." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/returns" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/returns" }],
+  }),
   component: () => (
     <AppShell>
       <div className="mx-auto max-w-3xl px-4 py-10 space-y-4 text-sm text-muted-foreground">

@@ -1,0 +1,18 @@
+# GochaoBD
+
+> Bangladesh-based online brand for home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh.
+
+## Pages
+
+- [Home](/): Featured products, best sellers and flash deals.
+- [Shop](/shop): Full catalogue of home organizers and kitchen essentials.
+- [Categories](/categories): Browse by storage, kitchen, wardrobe and smart home.
+- [About](/about): Our brand, mission and promise to customers.
+- [Contact](/contact): Phone, WhatsApp and email support.
+- [FAQ](/faq): Delivery, returns, COD, bKash and Nagad questions answered.
+- [Returns](/returns): 7-day return and refund policy.
+- [Privacy](/privacy): How we collect and use customer data.
+
+## Optional
+
+- [Track order](/track): Look up an order by number.

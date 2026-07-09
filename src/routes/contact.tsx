@@ -4,7 +4,16 @@ import { Phone, Mail, MessageCircle, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({ meta: [{ title: "Contact — GochaoBD" }] }),
+  head: () => ({
+    meta: [
+      { title: "Contact — GochaoBD" },
+      { name: "description", content: "Reach GochaoBD by phone, WhatsApp or email — we reply within a few hours, 7 days a week." },
+      { property: "og:title", content: "Contact GochaoBD" },
+      { property: "og:description", content: "Get in touch with the GochaoBD team for orders, returns and product help." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/contact" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/contact" }],
+  }),
   component: () => (
     <AppShell>
       <div className="mx-auto max-w-3xl px-4 py-10">

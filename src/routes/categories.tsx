@@ -5,7 +5,16 @@ import { categoriesQuery, resolveImage } from "@/lib/queries";
 import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/categories")({
-  head: () => ({ meta: [{ title: "Categories — GochaoBD" }, { name: "description", content: "Browse categories: storage, kitchen, wardrobe organizers and smart home." }] }),
+  head: () => ({
+    meta: [
+      { title: "Categories — GochaoBD" },
+      { name: "description", content: "Browse GochaoBD categories: storage, kitchen accessories, wardrobe organizers and smart home essentials." },
+      { property: "og:title", content: "Shop by category — GochaoBD" },
+      { property: "og:description", content: "Find the right organizer for every room in your home." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/categories" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/categories" }],
+  }),
   component: CategoriesPage,
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQuery()),
   errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {error.message}</div>,

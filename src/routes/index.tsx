@@ -8,6 +8,16 @@ import { ArrowRight, Truck, ShieldCheck, RotateCcw, Phone, Sparkles, Zap } from 
 import heroImg from "@/assets/hero-organizers.jpg";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "GochaoBD — Home Organizers in Bangladesh" },
+      { name: "description", content: "Beautiful, affordable home organizers, kitchen accessories and smart home essentials. Cash on delivery across Bangladesh." },
+      { property: "og:title", content: "GochaoBD — Home Organizers in Bangladesh" },
+      { property: "og:description", content: "Organize and beautify your home with thoughtfully designed products. COD available across Bangladesh." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/" }],
+  }),
   component: HomePage,
   loader: async ({ context }) => {
     await Promise.all([
@@ -58,7 +68,8 @@ function Hero() {
             <Sparkles className="h-3 w-3" /> New season · Home organizers
           </div>
           <h1 className="mt-4 text-4xl md:text-6xl font-display leading-[1.05]">
-            A calmer home,<br />one shelf at a time.
+            <span className="sr-only">GochaoBD — Home organizers and kitchen essentials in Bangladesh. </span>
+            <span aria-hidden="true">A calmer home,<br />one shelf at a time.</span>
           </h1>
           <p className="mt-4 text-muted-foreground max-w-md">
             Thoughtfully designed organizers and kitchen essentials — delivered across Bangladesh.

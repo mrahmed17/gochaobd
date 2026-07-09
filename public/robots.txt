@@ -3,3 +3,5 @@ Allow: /
 Disallow: /admin
 Disallow: /account
 Disallow: /checkout
+
+Sitemap: https://gochaobd.lovable.app/sitemap.xml

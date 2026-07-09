@@ -6,7 +6,16 @@ import { categoriesQuery, productsQuery } from "@/lib/queries";
 import { useState } from "react";
 
 export const Route = createFileRoute("/shop")({
-  head: () => ({ meta: [{ title: "Shop — GochaoBD" }, { name: "description", content: "Browse all home organizers, kitchen accessories and smart home essentials." }] }),
+  head: () => ({
+    meta: [
+      { title: "Shop — GochaoBD" },
+      { name: "description", content: "Browse all GochaoBD home organizers, kitchen accessories, storage solutions and smart home essentials." },
+      { property: "og:title", content: "Shop all — GochaoBD" },
+      { property: "og:description", content: "Every GochaoBD product in one place. Filter by category, sort by price." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/shop" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/shop" }],
+  }),
   component: ShopPage,
   loader: async ({ context }) => {
     await Promise.all([

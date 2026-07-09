@@ -9,16 +9,42 @@ import { useCart } from "@/lib/cart";
 import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package } from "lucide-react";
 
 export const Route = createFileRoute("/product/$slug")({
-  head: ({ loaderData }) => {
-    const p = (loaderData as { product: { name: string; description: string | null; images: string[] } } | undefined)?.product;
-    if (!p) return { meta: [{ title: "Product — GochaoBD" }] };
+  head: ({ params, loaderData }) => {
+    const p = (loaderData as { product: { name: string; description: string | null; images: string[]; price_bdt: number; stock: number; rating: number; review_count: number } } | undefined)?.product;
+    const url = `https://gochaobd.lovable.app/product/${params.slug}`;
+    if (!p) return { meta: [{ title: "Product — GochaoBD" }], links: [{ rel: "canonical", href: url }] };
     const img = resolveImage(p.images[0]);
+    const desc = (p.description ?? `${p.name} — available at GochaoBD with cash on delivery across Bangladesh.`).slice(0, 160);
     return {
       meta: [
         { title: `${p.name} — GochaoBD` },
-        { name: "description", content: p.description ?? "" },
+        { name: "description", content: desc },
         { property: "og:title", content: p.name },
+        { property: "og:description", content: desc },
         { property: "og:image", content: img },
+        { property: "og:type", content: "product" },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: p.name,
+            image: img,
+            description: p.description ?? undefined,
+            aggregateRating: p.review_count > 0 ? { "@type": "AggregateRating", ratingValue: p.rating, reviewCount: p.review_count } : undefined,
+            offers: {
+              "@type": "Offer",
+              price: p.price_bdt,
+              priceCurrency: "BDT",
+              availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              url,
+            },
+          }),
+        },
       ],
     };
   },
@@ -89,9 +115,9 @@ function ProductPage() {
 
             <div className="mt-5 flex items-center gap-3">
               <div className="inline-flex items-center rounded-full border">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="h-11 w-11 grid place-items-center" aria-label="decrement"><Minus className="h-4 w-4" /></button>
-                <span className="w-10 text-center font-medium">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} className="h-11 w-11 grid place-items-center" aria-label="increment"><Plus className="h-4 w-4" /></button>
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="h-11 w-11 grid place-items-center" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
+                <span className="w-10 text-center font-medium" aria-live="polite">{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className="h-11 w-11 grid place-items-center" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
               </div>
               <button
                 onClick={() => cart.add({ id: product.id, slug: product.slug, name: product.name, price, image: product.images[0] }, qty)}
@@ -99,7 +125,7 @@ function ProductPage() {
               >
                 Add to cart
               </button>
-              <button onClick={() => cart.toggleWish(product.id)} className="h-12 w-12 grid place-items-center rounded-full border" aria-label="wishlist">
+              <button onClick={() => cart.toggleWish(product.id)} className="h-12 w-12 grid place-items-center rounded-full border" aria-label={cart.inWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}>
                 <Heart className={`h-5 w-5 ${cart.inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`} />
               </button>
             </div>
