@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell, Footer } from "@/components/AppShell";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({ meta: [{ title: "About — GochaoBD" }, { name: "description", content: "GochaoBD is a Bangladeshi brand crafting affordable, beautiful home organizers." }] }),
+  head: () => ({
+    meta: [
+      { title: "About — GochaoBD" },
+      { name: "description", content: "GochaoBD is a Bangladeshi brand crafting affordable, beautiful home organizers, kitchen accessories and smart home essentials." },
+      { property: "og:title", content: "About GochaoBD" },
+      { property: "og:description", content: "Meet the Bangladeshi brand helping women organize and beautify their homes." },
+      { property: "og:url", content: "https://gochaobd.lovable.app/about" },
+    ],
+    links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/about" }],
+  }),
   component: () => (
     <AppShell>
       <div className="mx-auto max-w-3xl px-4 py-10 prose prose-neutral">
