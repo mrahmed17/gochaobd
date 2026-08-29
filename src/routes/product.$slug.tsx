@@ -62,8 +62,10 @@ export const Route = createFileRoute("/product/$slug")({
 });
 
 function ProductPage() {
-  const { product } = Route.useLoaderData();
+  const { slug } = Route.useParams();
+  const { data: product } = useSuspenseQuery(productBySlugQuery(slug));
   const { data: all } = useSuspenseQuery(productsQuery());
+  if (!product) return null;
   const cart = useCart();
   const [qty, setQty] = useState(1);
   const price = product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
