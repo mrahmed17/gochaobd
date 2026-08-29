@@ -49,7 +49,8 @@ export const Route = createFileRoute("/category/$slug")({
 
 function CategoryPage() {
   const { slug } = Route.useParams();
-  const { cat } = Route.useLoaderData();
+  const { data: cats } = useSuspenseQuery(categoriesQuery());
+  const cat = cats.find((c) => c.slug === slug)!;
   const { data: products } = useSuspenseQuery(productsQuery({ categorySlug: slug }));
   return (
     <AppShell>
