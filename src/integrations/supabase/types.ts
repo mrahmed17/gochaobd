@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          contact: string | null
+          created_at: string
+          id: string
+          items: Json
+          recovered: boolean
+          subtotal_bdt: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string
+          id?: string
+          items?: Json
+          recovered?: boolean
+          subtotal_bdt?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string
+          id?: string
+          items?: Json
+          recovered?: boolean
+          subtotal_bdt?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      addresses: {
+        Row: {
+          address_line: string
+          city: string
+          created_at: string
+          district: string | null
+          full_name: string
+          id: string
+          is_default: boolean
+          label: string
+          phone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line: string
+          city: string
+          created_at?: string
+          district?: string | null
+          full_name: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line?: string
+          city?: string
+          created_at?: string
+          district?: string | null
+          full_name?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -68,6 +143,74 @@ export type Database = {
         }
         Relationships: []
       }
+      loyalty: {
+        Row: {
+          created_at: string
+          points: number
+          referral_code: string
+          referred_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          points?: number
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          points?: number
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          channel: string
+          created_at: string
+          id: string
+          order_id: string | null
+          recipient: string
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          body?: string | null
+          channel?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          recipient: string
+          status?: string
+          subject?: string | null
+        }
+        Update: {
+          body?: string | null
+          channel?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          recipient?: string
+          status?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -78,6 +221,7 @@ export type Database = {
           product_name: string
           qty: number
           unit_price_bdt: number
+          variant_label: string | null
         }
         Insert: {
           created_at?: string
@@ -88,6 +232,7 @@ export type Database = {
           product_name: string
           qty: number
           unit_price_bdt: number
+          variant_label?: string | null
         }
         Update: {
           created_at?: string
@@ -98,6 +243,7 @@ export type Database = {
           product_name?: string
           qty?: number
           unit_price_bdt?: number
+          variant_label?: string | null
         }
         Relationships: [
           {
@@ -124,6 +270,7 @@ export type Database = {
           created_at: string
           customer_name: string
           customer_phone: string
+          delivery_zone: string
           discount_bdt: number
           district: string | null
           guest_email: string | null
@@ -146,6 +293,7 @@ export type Database = {
           created_at?: string
           customer_name: string
           customer_phone: string
+          delivery_zone?: string
           discount_bdt?: number
           district?: string | null
           guest_email?: string | null
@@ -168,6 +316,7 @@ export type Database = {
           created_at?: string
           customer_name?: string
           customer_phone?: string
+          delivery_zone?: string
           discount_bdt?: number
           district?: string | null
           guest_email?: string | null
@@ -184,6 +333,47 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          option_group: string
+          price_delta_bdt: number
+          product_id: string
+          sort_order: number
+          stock: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          option_group?: string
+          price_delta_bdt?: number
+          product_id: string
+          sort_order?: number
+          stock?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          option_group?: string
+          price_delta_bdt?: number
+          product_id?: string
+          sort_order?: number
+          stock?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
@@ -320,6 +510,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_alerts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          notified: boolean
+          phone: string | null
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          notified?: boolean
+          phone?: string | null
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          notified?: boolean
+          phone?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
