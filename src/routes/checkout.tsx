@@ -81,7 +81,7 @@ function CheckoutPage() {
 
   return (
     <AppShell>
-      <form onSubmit={placeOrder} className="mx-auto max-w-6xl px-4 py-6 grid md:grid-cols-[1fr,340px] gap-6">
+      <form onSubmit={submitOrder} className="mx-auto max-w-6xl px-4 py-6 grid md:grid-cols-[1fr,340px] gap-6">
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-display">Checkout</h1>
