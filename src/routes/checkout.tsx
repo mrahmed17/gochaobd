@@ -8,6 +8,7 @@ import { DELIVERY_ZONES, shippingFee } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — GochaoBD" }, { name: "robots", content: "noindex" }] }),
@@ -47,7 +48,7 @@ function CheckoutPage() {
       const { data: user } = await supabase.auth.getUser();
       const { data: order, error } = await supabase.from("orders").insert({
         user_id: user.user?.id ?? null,
-        guest_email: user.user?.email ?? form.email || null,
+        guest_email: user.user?.email ?? (form.email || null),
         customer_name: form.name,
         customer_phone: form.phone,
         address_line: form.address,
@@ -76,7 +77,7 @@ function CheckoutPage() {
       const { error: itemsErr } = await supabase.from("order_items").insert(items);
       if (itemsErr) throw itemsErr;
 
-      const recipient = user.user?.email ?? form.email ?? form.phone;
+      const recipient = user.user?.email ?? (form.email || form.phone);
       if (recipient) {
         await supabase.from("notifications").insert({
           order_id: order.id,
