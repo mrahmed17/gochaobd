@@ -230,3 +230,93 @@ function ProductPage() {
     </AppShell>
   );
 }
+
+function StockAlert({ productId }: { productId: string }) {
+  const [contact, setContact] = useState("");
+  const [done, setDone] = useState(false);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const isEmail = contact.includes("@");
+    const { error } = await supabase.from("stock_alerts").insert({
+      product_id: productId,
+      email: isEmail ? contact : null,
+      phone: isEmail ? null : contact,
+    });
+    if (error) { toast.error("Could not save. Try again."); return; }
+    setDone(true);
+    toast.success("We'll notify you when it's back!");
+  }
+  if (done) return <p className="mt-4 text-sm text-brand">You're on the notify list ✓</p>;
+  return (
+    <form onSubmit={submit} className="mt-4 rounded-2xl border p-3 bg-card">
+      <div className="flex items-center gap-2 text-sm font-medium"><BellRing className="h-4 w-4 text-accent-orange" /> Notify me when back in stock</div>
+      <div className="mt-2 flex gap-2">
+        <input required value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Email or phone" className="flex-1 rounded-full border px-3 py-2 text-sm bg-background" />
+        <button className="rounded-full bg-brand text-brand-foreground px-4 text-sm">Notify me</button>
+      </div>
+    </form>
+  );
+}
+
+function Reviews({ productId, slug }: { productId: string; slug: string }) {
+  const qc = useQueryClient();
+  const { data: reviews = [] } = useQuery(reviewsQuery(productId));
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) { toast.error("Please sign in to write a review"); return; }
+      const { error } = await supabase.from("reviews").insert({
+        product_id: productId,
+        user_id: u.user.id,
+        author_name: (u.user.user_metadata?.full_name as string) || u.user.email?.split("@")[0] || "Customer",
+        rating,
+        comment: comment.trim() || null,
+      });
+      if (error) throw error;
+      setComment("");
+      toast.success("Thanks for your review!");
+      qc.invalidateQueries({ queryKey: ["reviews", productId] });
+      qc.invalidateQueries({ queryKey: ["product", slug] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not post review");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-10">
+      <h2 className="font-display text-xl md:text-2xl">Ratings & reviews</h2>
+      <form onSubmit={submit} className="mt-4 rounded-2xl border p-4 bg-card">
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button type="button" key={n} onClick={() => setRating(n)} aria-label={`Rate ${n} star`}>
+              <Star className={`h-6 w-6 ${n <= rating ? "fill-accent-orange text-accent-orange" : "text-muted-foreground"}`} />
+            </button>
+          ))}
+        </div>
+        <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Share your experience…" className="mt-3 w-full rounded-xl border px-3 py-2 text-sm bg-background" />
+        <button disabled={busy} className="mt-2 rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm disabled:opacity-60">Post review</button>
+      </form>
+      <ul className="mt-4 space-y-3">
+        {reviews.length === 0 && <li className="text-sm text-muted-foreground">No reviews yet — be the first!</li>}
+        {reviews.map((r) => (
+          <li key={r.id} className="rounded-2xl border p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-sm">{r.author_name}</span>
+              <span className="text-xs text-accent-orange">{"★".repeat(r.rating)}</span>
+            </div>
+            {r.comment && <p className="mt-1 text-sm text-muted-foreground">{r.comment}</p>}
+            <time className="mt-1 block text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</time>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
