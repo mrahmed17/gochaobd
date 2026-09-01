@@ -117,10 +117,28 @@ function CheckoutPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
               <Field label="Phone number" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required placeholder="01XXXXXXXXX" />
+              <Field label="Email (for order updates)" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" className="sm:col-span-2" />
               <Field label="Address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} required className="sm:col-span-2" />
               <Select label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} options={["Dhaka", "Chattogram", "Sylhet", "Khulna", "Rajshahi", "Barishal", "Rangpur", "Mymensingh"]} />
               <Field label="Area / District (optional)" value={form.district} onChange={(v) => setForm({ ...form, district: v })} />
+              <label className="block sm:col-span-2">
+                <span className="text-xs text-muted-foreground">Delivery zone</span>
+                <div className="mt-1 grid sm:grid-cols-3 gap-2">
+                  {DELIVERY_ZONES.map((z) => (
+                    <button
+                      type="button"
+                      key={z.value}
+                      onClick={() => setForm({ ...form, zone: z.value })}
+                      className={`rounded-xl border px-3 py-2.5 text-sm text-left ${form.zone === z.value ? "border-brand bg-brand-soft/30 font-medium" : ""}`}
+                    >
+                      {z.label}
+                      <span className="block text-xs text-muted-foreground">{bdt(z.fee)} delivery</span>
+                    </button>
+                  ))}
+                </div>
+              </label>
               <Field label="Order notes (optional)" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} className="sm:col-span-2" />
+
             </div>
           </section>
 
