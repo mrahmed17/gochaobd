@@ -19,12 +19,13 @@ function CheckoutPage() {
   const [coupon, setCoupon] = useState("");
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
   const [form, setForm] = useState({
-    name: "", phone: "", address: "", city: "Dhaka", district: "", notes: "", payment: "cod",
+    name: "", phone: "", email: "", address: "", city: "Dhaka", district: "", notes: "", payment: "cod", zone: "dhaka",
   });
 
-  const shipping = cart.subtotal >= 1500 ? 0 : 80;
+  const shipping = shippingFee(form.zone, cart.subtotal);
   const discount = applied?.discount ?? 0;
   const total = Math.max(0, cart.subtotal + shipping - discount);
+
 
   async function applyCoupon() {
     if (!coupon.trim()) return;
