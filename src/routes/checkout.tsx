@@ -3,6 +3,8 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useCart } from "@/lib/cart";
 import { bdt } from "@/lib/format";
+import { DELIVERY_ZONES, shippingFee } from "@/lib/queries";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
