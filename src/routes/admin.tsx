@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
+import { verifyAdmin, getAdminData, updateOrderStatus, updateProductStock } from "@/lib/admin.functions";
 import { bdt } from "@/lib/format";
 import { toast } from "sonner";
 import { Package, ShoppingBag, Users, TrendingUp } from "lucide-react";
@@ -24,8 +25,11 @@ function AdminPage() {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) { nav({ to: "/auth", replace: true }); return; }
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
-      if (!roles?.some((r) => r.role === "admin")) {
+      try {
+        // Server-side role verification — the admin role is checked in the
+        // backend against user_roles, never trusted from the client.
+        await verifyAdmin();
+      } catch {
         toast.error("Admin access only");
         nav({ to: "/account", replace: true });
         return;
@@ -36,28 +40,32 @@ function AdminPage() {
   }, [nav]);
 
   async function reload() {
-    const [{ data: o }, { data: p }, { data: c }] = await Promise.all([
-      supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("products").select("*").order("created_at", { ascending: false }),
-      supabase.from("coupons").select("*"),
-    ]);
-    setOrders(o ?? []); setProducts(p ?? []); setCoupons(c ?? []);
-    setStats({
-      revenue: (o ?? []).reduce((s, x) => s + x.total_bdt, 0),
-      orders: o?.length ?? 0,
-      products: p?.length ?? 0,
-      pending: (o ?? []).filter((x) => x.status === "pending").length,
-    });
+    try {
+      const { orders: o, products: p, coupons: c } = await getAdminData();
+      setOrders(o); setProducts(p); setCoupons(c);
+      setStats({
+        revenue: o.reduce((s: number, x: any) => s + x.total_bdt, 0),
+        orders: o.length,
+        products: p.length,
+        pending: o.filter((x: any) => x.status === "pending").length,
+      });
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not load admin data");
+    }
   }
 
   async function updateStatus(id: string, status: string) {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Updated"); reload(); }
+    try {
+      await updateOrderStatus({ data: { id, status: status as any } });
+      toast.success("Updated"); reload();
+    } catch (e: any) { toast.error(e.message ?? "Update failed"); }
   }
 
   async function updateStock(id: string, stock: number) {
-    const { error } = await supabase.from("products").update({ stock }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Stock updated"); reload(); }
+    try {
+      await updateProductStock({ data: { id, stock } });
+      toast.success("Stock updated"); reload();
+    } catch (e: any) { toast.error(e.message ?? "Update failed"); }
   }
 
   if (!ready) return <AppShell><div className="p-8 text-sm">Checking access…</div></AppShell>;
