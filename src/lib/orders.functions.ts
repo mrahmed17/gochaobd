@@ -125,8 +125,8 @@ export const placeOrder = createServerFn({ method: "POST" })
     const { data: order, error: oErr } = await supabaseAdmin
       .from("orders")
       .insert({
-        user_id: null,
-        guest_email: data.customer.email || null,
+        user_id: userId,
+        guest_email: userEmail ?? (data.customer.email || null),
         customer_name: data.customer.name,
         customer_phone: data.customer.phone,
         address_line: data.customer.address,
@@ -150,11 +150,11 @@ export const placeOrder = createServerFn({ method: "POST" })
       .insert(lines.map((l) => ({ ...l, order_id: order.id })));
     if (iErr) throw new Error(iErr.message);
 
-    const recipient = data.customer.email || data.customer.phone;
+    const recipient = userEmail ?? (data.customer.email || data.customer.phone);
     if (recipient) {
       await supabase.from("notifications").insert({
         order_id: order.id,
-        channel: data.customer.email ? "email" : "sms",
+        channel: userEmail || data.customer.email ? "email" : "sms",
         recipient,
         subject: `Order ${order.order_number} confirmed`,
         body: `Thank you ${data.customer.name}! Your GochaoBD order ${order.order_number} for ৳${total} is confirmed. Payment: ${data.customer.payment.toUpperCase()}.`,
