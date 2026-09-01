@@ -5,7 +5,7 @@ import { useCart } from "@/lib/cart";
 import { bdt } from "@/lib/format";
 import { DELIVERY_ZONES, shippingFee } from "@/lib/queries";
 
-import { supabase } from "@/integrations/supabase/client";
+import { checkCoupon, placeOrder } from "@/lib/orders.functions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { track } from "@/lib/analytics";
@@ -32,65 +32,41 @@ function CheckoutPage() {
 
   async function applyCoupon() {
     if (!coupon.trim()) return;
-    const { data } = await supabase.from("coupons").select("*").eq("code", coupon.trim().toUpperCase()).eq("active", true).maybeSingle();
-    if (!data) { toast.error("Invalid coupon"); return; }
-    if (cart.subtotal < data.min_order_bdt) { toast.error(`Minimum order ৳${data.min_order_bdt}`); return; }
-    const disc = data.discount_type === "percent" ? Math.round((cart.subtotal * data.discount_value) / 100) : data.discount_value;
-    setApplied({ code: data.code, discount: disc });
+    const { coupon: c } = await checkCoupon({ data: { code: coupon.trim() } });
+    if (!c) { toast.error("Invalid coupon"); return; }
+    if (cart.subtotal < c.min_order_bdt) { toast.error(`Minimum order ৳${c.min_order_bdt}`); return; }
+    const disc = c.discount_type === "percent" ? Math.round((cart.subtotal * c.discount_value) / 100) : c.discount_value;
+    setApplied({ code: c.code, discount: disc });
     toast.success(`Coupon applied: -${bdt(disc)}`);
   }
 
-  async function placeOrder(e: React.FormEvent) {
+  async function submitOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!cart.items.length) return;
     setLoading(true);
     try {
-      const { data: user } = await supabase.auth.getUser();
-      const { data: order, error } = await supabase.from("orders").insert({
-        user_id: user.user?.id ?? null,
-        guest_email: user.user?.email ?? (form.email || null),
-        customer_name: form.name,
-        customer_phone: form.phone,
-        address_line: form.address,
-        city: form.city,
-        district: form.district || null,
-        delivery_zone: form.zone,
-        notes: form.notes || null,
-        payment_method: form.payment,
-        subtotal_bdt: cart.subtotal,
-        shipping_bdt: shipping,
-        discount_bdt: discount,
-        total_bdt: total,
-        coupon_code: applied?.code ?? null,
-      }).select("id, order_number").single();
-      if (error) throw error;
+      // All prices, shipping and discounts are recomputed server-side.
+      const result = await placeOrder({
+        data: {
+          customer: {
+            name: form.name,
+            phone: form.phone,
+            email: form.email,
+            address: form.address,
+            city: form.city,
+            district: form.district,
+            notes: form.notes,
+            zone: form.zone as "dhaka" | "suburb" | "outside",
+            payment: form.payment as "cod" | "bkash" | "nagad",
+          },
+          items: cart.items.map((i) => ({ productId: i.productId, variant: i.variant ?? null, qty: i.qty })),
+          couponCode: applied?.code ?? null,
+        },
+      });
 
-      const items = cart.items.map((i) => ({
-        order_id: order.id,
-        product_id: i.productId,
-        product_name: i.name,
-        product_image: i.image,
-        variant_label: i.variant ?? null,
-        unit_price_bdt: i.price,
-        qty: i.qty,
-      }));
-      const { error: itemsErr } = await supabase.from("order_items").insert(items);
-      if (itemsErr) throw itemsErr;
-
-      const recipient = user.user?.email ?? (form.email || form.phone);
-      if (recipient) {
-        await supabase.from("notifications").insert({
-          order_id: order.id,
-          channel: form.email || user.user?.email ? "email" : "sms",
-          recipient,
-          subject: `Order ${order.order_number} confirmed`,
-          body: `Thank you ${form.name}! Your GochaoBD order ${order.order_number} for ৳${total} is confirmed. Payment: ${form.payment.toUpperCase()}.`,
-        });
-      }
-
-      track("purchase", { transaction_id: order.order_number, value: total, currency: "BDT", items: items.length });
+      track("purchase", { transaction_id: result.orderNumber, value: result.total, currency: "BDT", items: cart.items.length });
       cart.clear();
-      nav({ to: "/order-success/$number", params: { number: order.order_number } });
+      nav({ to: "/order-success/$number", params: { number: result.orderNumber } });
 
     } catch (err: any) {
       toast.error(err.message ?? "Could not place order");
