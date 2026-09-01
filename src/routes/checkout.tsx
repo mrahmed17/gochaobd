@@ -5,7 +5,7 @@ import { useCart } from "@/lib/cart";
 import { bdt } from "@/lib/format";
 import { DELIVERY_ZONES, shippingFee } from "@/lib/queries";
 
-import { checkCoupon, placeOrder } from "@/lib/orders.functions";
+import { checkCoupon, placeOrder as placeOrderFn } from "@/lib/orders.functions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { track } from "@/lib/analytics";
@@ -46,7 +46,7 @@ function CheckoutPage() {
     setLoading(true);
     try {
       // All prices, shipping and discounts are recomputed server-side.
-      const result = await placeOrder({
+      const result = await placeOrderFn({
         data: {
           customer: {
             name: form.name,
