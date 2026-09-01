@@ -115,8 +115,8 @@ function ProductPage() {
 
           <div>
             <div className="flex items-center gap-2 text-xs">
-              {product.stock > 0 ? (
-                <span className="inline-flex items-center gap-1 text-brand font-medium"><CheckCircle2 className="h-3 w-3" /> In stock ({product.stock})</span>
+              {stock > 0 ? (
+                <span className="inline-flex items-center gap-1 text-brand font-medium"><CheckCircle2 className="h-3 w-3" /> In stock ({stock})</span>
               ) : (
                 <span className="text-destructive font-medium">Out of stock</span>
               )}
@@ -135,6 +135,24 @@ function ProductPage() {
               )}
             </div>
 
+            {variants.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs text-muted-foreground">{variants[0].option_group}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {variants.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setVariant(v.label)}
+                      disabled={v.stock <= 0}
+                      className={`rounded-full border px-4 py-2 text-sm disabled:opacity-40 disabled:line-through ${variant === v.label ? "border-brand bg-brand-soft/40 font-medium" : ""}`}
+                    >
+                      {v.label}{v.price_delta_bdt ? ` (+${bdt(v.price_delta_bdt)})` : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-brand" /> Delivery in {product.delivery_days ?? "2–5 days"}</div>
               {product.cod_available && <div className="flex items-center gap-2"><Package className="h-4 w-4 text-brand" /> Cash on Delivery available</div>}
@@ -148,8 +166,9 @@ function ProductPage() {
                 <button onClick={() => setQty((q) => q + 1)} className="h-11 w-11 grid place-items-center" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
               </div>
               <button
-                onClick={() => cart.add({ id: product.id, slug: product.slug, name: product.name, price, image: product.images[0] }, qty)}
-                className="flex-1 rounded-full bg-brand text-brand-foreground py-3 text-sm font-medium btn-glow"
+                onClick={addToCart}
+                disabled={stock <= 0}
+                className="flex-1 rounded-full bg-brand text-brand-foreground py-3 text-sm font-medium btn-glow disabled:opacity-50"
               >
                 Add to cart
               </button>
@@ -157,6 +176,9 @@ function ProductPage() {
                 <Heart className={`h-5 w-5 ${cart.inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`} />
               </button>
             </div>
+
+            {stock <= 0 && <StockAlert productId={product.id} />}
+
 
             {product.description && (
               <details open className="mt-6 border-t pt-4">
