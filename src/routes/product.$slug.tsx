@@ -68,12 +68,25 @@ function ProductPage() {
   const { slug } = Route.useParams();
   const { data: product } = useSuspenseQuery(productBySlugQuery(slug));
   const { data: all } = useSuspenseQuery(productsQuery());
-  if (!product) return null;
   const cart = useCart();
   const [qty, setQty] = useState(1);
-  const price = product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
+  const [imgIdx, setImgIdx] = useState(0);
+  const [variant, setVariant] = useState<string | null>(null);
+  const { data: variants = [] } = useQuery({ ...variantsQuery(product?.id ?? ""), enabled: !!product });
+  if (!product) return null;
+  const chosen = variants.find((v) => v.label === variant) ?? null;
+  const base = product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
+  const price = base + (chosen?.price_delta_bdt ?? 0);
+  const stock = chosen ? chosen.stock : product.stock;
   const related = all.filter((p) => p.id !== product.id && p.category_id === product.category_id).slice(0, 4);
   const fbt = all.filter((p) => p.id !== product.id).slice(0, 2);
+  const images = product.images.length ? product.images : [""];
+
+  function addToCart() {
+    if (variants.length && !variant) { toast.error("Please select an option"); return; }
+    if (stock <= 0) { toast.error("Out of stock"); return; }
+    cart.add({ id: product!.id, slug: product!.slug, name: product!.name, price, image: images[imgIdx] ?? images[0], variant }, qty);
+  }
 
   return (
     <AppShell>
@@ -83,12 +96,22 @@ function ProductPage() {
         <div className="grid md:grid-cols-2 gap-6">
           <div>
             <div className="rounded-3xl overflow-hidden bg-muted border aspect-square">
-              <img src={resolveImage(product.images[0])} alt={product.name} className="h-full w-full object-cover" />
+              <img src={resolveImage(images[imgIdx])} alt={product.name} className="h-full w-full object-cover" />
             </div>
+            {images.length > 1 && (
+              <div className="mt-2 flex gap-2 overflow-x-auto">
+                {images.map((im, i) => (
+                  <button key={im + i} onClick={() => setImgIdx(i)} aria-label={`View image ${i + 1}`} className={`h-16 w-16 shrink-0 rounded-xl overflow-hidden border ${i === imgIdx ? "ring-2 ring-brand" : ""}`}>
+                    <img src={resolveImage(im)} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
             {product.video_url && (
               <video controls src={product.video_url} className="mt-2 rounded-2xl w-full" />
             )}
           </div>
+
 
           <div>
             <div className="flex items-center gap-2 text-xs">
