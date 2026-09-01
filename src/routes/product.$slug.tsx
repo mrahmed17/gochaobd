@@ -1,12 +1,15 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell, Footer } from "@/components/AppShell";
 import { ProductCard } from "@/components/ProductCard";
-import { productBySlugQuery, productsQuery, resolveImage } from "@/lib/queries";
+import { productBySlugQuery, productsQuery, resolveImage, variantsQuery, reviewsQuery } from "@/lib/queries";
 import { bdt } from "@/lib/format";
 import { useCart } from "@/lib/cart";
-import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package, BellRing } from "lucide-react";
+
 
 export const Route = createFileRoute("/product/$slug")({
   head: ({ params, loaderData }) => {
