@@ -47,11 +47,13 @@ function CheckoutPage() {
       const { data: user } = await supabase.auth.getUser();
       const { data: order, error } = await supabase.from("orders").insert({
         user_id: user.user?.id ?? null,
+        guest_email: user.user?.email ?? form.email || null,
         customer_name: form.name,
         customer_phone: form.phone,
         address_line: form.address,
         city: form.city,
         district: form.district || null,
+        delivery_zone: form.zone,
         notes: form.notes || null,
         payment_method: form.payment,
         subtotal_bdt: cart.subtotal,
@@ -64,17 +66,31 @@ function CheckoutPage() {
 
       const items = cart.items.map((i) => ({
         order_id: order.id,
-        product_id: i.id,
+        product_id: i.productId,
         product_name: i.name,
         product_image: i.image,
+        variant_label: i.variant ?? null,
         unit_price_bdt: i.price,
         qty: i.qty,
       }));
       const { error: itemsErr } = await supabase.from("order_items").insert(items);
       if (itemsErr) throw itemsErr;
 
+      const recipient = user.user?.email ?? form.email ?? form.phone;
+      if (recipient) {
+        await supabase.from("notifications").insert({
+          order_id: order.id,
+          channel: form.email || user.user?.email ? "email" : "sms",
+          recipient,
+          subject: `Order ${order.order_number} confirmed`,
+          body: `Thank you ${form.name}! Your GochaoBD order ${order.order_number} for ৳${total} is confirmed. Payment: ${form.payment.toUpperCase()}.`,
+        });
+      }
+
+      track("purchase", { transaction_id: order.order_number, value: total, currency: "BDT", items: items.length });
       cart.clear();
       nav({ to: "/order-success/$number", params: { number: order.order_number } });
+
     } catch (err: any) {
       toast.error(err.message ?? "Could not place order");
     } finally {
