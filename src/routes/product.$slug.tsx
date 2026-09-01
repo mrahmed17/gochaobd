@@ -213,6 +213,10 @@ function ProductPage() {
           </section>
         )}
 
+        <Reviews productId={product.id} slug={product.slug} />
+
+
+
         {related.length > 0 && (
           <section className="mt-10">
             <h2 className="font-display text-xl md:text-2xl">You may also like</h2>
