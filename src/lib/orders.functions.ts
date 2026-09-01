@@ -108,9 +108,19 @@ export const placeOrder = createServerFn({ method: "POST" })
     const total = Math.max(0, subtotal + shipping - discount);
 
     // 6) Identify the caller if signed in (optional — guest checkout supported)
+    const { getRequestHeader } = await import("@tanstack/react-start/server");
+    const authHeader = getRequestHeader("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const supabase = createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_PUBLISHABLE_KEY"]!, {
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
     });
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+    if (token) {
+      const { data: u } = await supabase.auth.getUser(token);
+      userId = u.user?.id ?? null;
+      userEmail = u.user?.email ?? null;
+    }
 
     const { data: order, error: oErr } = await supabaseAdmin
       .from("orders")
