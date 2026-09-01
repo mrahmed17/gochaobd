@@ -96,3 +96,58 @@ export const productsByIdsQuery = (ids: string[]) =>
     },
     enabled: ids.length > 0,
   });
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  option_group: string;
+  label: string;
+  price_delta_bdt: number;
+  stock: number;
+}
+
+export const variantsQuery = (productId: string) =>
+  queryOptions({
+    queryKey: ["variants", productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id, product_id, option_group, label, price_delta_bdt, stock")
+        .eq("product_id", productId)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as ProductVariant[];
+    },
+  });
+
+export interface Review {
+  id: string;
+  author_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export const reviewsQuery = (productId: string) =>
+  queryOptions({
+    queryKey: ["reviews", productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("id, author_name, rating, comment, created_at")
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Review[];
+    },
+  });
+
+/** Delivery zones & charges (free above 1500 BDT). */
+export const DELIVERY_ZONES = [
+  { value: "dhaka", label: "Inside Dhaka", fee: 60 },
+  { value: "suburb", label: "Dhaka Suburb", fee: 100 },
+  { value: "outside", label: "Outside Dhaka", fee: 130 },
+] as const;
+
+export const shippingFee = (zone: string, subtotal: number) =>
+  subtotal >= 1500 ? 0 : (DELIVERY_ZONES.find((z) => z.value === zone)?.fee ?? 130);

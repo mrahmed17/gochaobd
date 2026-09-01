@@ -3,9 +3,12 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useCart } from "@/lib/cart";
 import { bdt } from "@/lib/format";
+import { DELIVERY_ZONES, shippingFee } from "@/lib/queries";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout — GochaoBD" }, { name: "robots", content: "noindex" }] }),
@@ -19,12 +22,13 @@ function CheckoutPage() {
   const [coupon, setCoupon] = useState("");
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
   const [form, setForm] = useState({
-    name: "", phone: "", address: "", city: "Dhaka", district: "", notes: "", payment: "cod",
+    name: "", phone: "", email: "", address: "", city: "Dhaka", district: "", notes: "", payment: "cod", zone: "dhaka",
   });
 
-  const shipping = cart.subtotal >= 1500 ? 0 : 80;
+  const shipping = shippingFee(form.zone, cart.subtotal);
   const discount = applied?.discount ?? 0;
   const total = Math.max(0, cart.subtotal + shipping - discount);
+
 
   async function applyCoupon() {
     if (!coupon.trim()) return;
@@ -44,11 +48,13 @@ function CheckoutPage() {
       const { data: user } = await supabase.auth.getUser();
       const { data: order, error } = await supabase.from("orders").insert({
         user_id: user.user?.id ?? null,
+        guest_email: user.user?.email ?? (form.email || null),
         customer_name: form.name,
         customer_phone: form.phone,
         address_line: form.address,
         city: form.city,
         district: form.district || null,
+        delivery_zone: form.zone,
         notes: form.notes || null,
         payment_method: form.payment,
         subtotal_bdt: cart.subtotal,
@@ -61,17 +67,31 @@ function CheckoutPage() {
 
       const items = cart.items.map((i) => ({
         order_id: order.id,
-        product_id: i.id,
+        product_id: i.productId,
         product_name: i.name,
         product_image: i.image,
+        variant_label: i.variant ?? null,
         unit_price_bdt: i.price,
         qty: i.qty,
       }));
       const { error: itemsErr } = await supabase.from("order_items").insert(items);
       if (itemsErr) throw itemsErr;
 
+      const recipient = user.user?.email ?? (form.email || form.phone);
+      if (recipient) {
+        await supabase.from("notifications").insert({
+          order_id: order.id,
+          channel: form.email || user.user?.email ? "email" : "sms",
+          recipient,
+          subject: `Order ${order.order_number} confirmed`,
+          body: `Thank you ${form.name}! Your GochaoBD order ${order.order_number} for ৳${total} is confirmed. Payment: ${form.payment.toUpperCase()}.`,
+        });
+      }
+
+      track("purchase", { transaction_id: order.order_number, value: total, currency: "BDT", items: items.length });
       cart.clear();
       nav({ to: "/order-success/$number", params: { number: order.order_number } });
+
     } catch (err: any) {
       toast.error(err.message ?? "Could not place order");
     } finally {
@@ -97,10 +117,28 @@ function CheckoutPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
               <Field label="Phone number" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required placeholder="01XXXXXXXXX" />
+              <Field label="Email (for order updates)" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@example.com" className="sm:col-span-2" />
               <Field label="Address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} required className="sm:col-span-2" />
               <Select label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} options={["Dhaka", "Chattogram", "Sylhet", "Khulna", "Rajshahi", "Barishal", "Rangpur", "Mymensingh"]} />
               <Field label="Area / District (optional)" value={form.district} onChange={(v) => setForm({ ...form, district: v })} />
+              <label className="block sm:col-span-2">
+                <span className="text-xs text-muted-foreground">Delivery zone</span>
+                <div className="mt-1 grid sm:grid-cols-3 gap-2">
+                  {DELIVERY_ZONES.map((z) => (
+                    <button
+                      type="button"
+                      key={z.value}
+                      onClick={() => setForm({ ...form, zone: z.value })}
+                      className={`rounded-xl border px-3 py-2.5 text-sm text-left ${form.zone === z.value ? "border-brand bg-brand-soft/30 font-medium" : ""}`}
+                    >
+                      {z.label}
+                      <span className="block text-xs text-muted-foreground">{bdt(z.fee)} delivery</span>
+                    </button>
+                  ))}
+                </div>
+              </label>
               <Field label="Order notes (optional)" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} className="sm:col-span-2" />
+
             </div>
           </section>
 
