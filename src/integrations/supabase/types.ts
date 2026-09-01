@@ -601,41 +601,7 @@ export type Database = {
       }
     }
     Views: {
-      reviews_public: {
-        Row: {
-          author_name: string | null
-          comment: string | null
-          created_at: string | null
-          id: string | null
-          product_id: string | null
-          rating: number | null
-        }
-        Insert: {
-          author_name?: string | null
-          comment?: string | null
-          created_at?: string | null
-          id?: string | null
-          product_id?: string | null
-          rating?: number | null
-        }
-        Update: {
-          author_name?: string | null
-          comment?: string | null
-          created_at?: string | null
-          id?: string | null
-          product_id?: string | null
-          rating?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reviews_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       has_role: {
@@ -644,15 +610,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      validate_coupon: {
-        Args: { p_code: string }
-        Returns: {
-          code: string
-          discount_type: string
-          discount_value: number
-          min_order_bdt: number
-        }[]
       }
     }
     Enums: {
