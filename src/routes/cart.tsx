@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell, Footer } from "@/components/AppShell";
 import { useCart } from "@/lib/cart";
 import { bdt } from "@/lib/format";
-import { resolveImage } from "@/lib/queries";
+import { resolveImage, shippingFee } from "@/lib/queries";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/cart")({
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/cart")({
 
 function CartPage() {
   const cart = useCart();
-  const shipping = cart.subtotal >= 1500 ? 0 : cart.subtotal === 0 ? 0 : 80;
+  const shipping = cart.subtotal === 0 ? 0 : shippingFee("dhaka", cart.subtotal);
   const total = cart.subtotal + shipping;
 
   if (!cart.items.length) {
@@ -40,6 +40,9 @@ function CartPage() {
                 <img src={resolveImage(i.image)} alt={i.name} className="h-20 w-20 rounded-xl object-cover bg-muted" />
                 <div className="flex-1 min-w-0">
                   <Link to="/product/$slug" params={{ slug: i.slug }} className="font-medium text-sm line-clamp-2">{i.name}</Link>
+                  {i.variant && (
+                    <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{i.variant}</span>
+                  )}
                   <div className="mt-1 text-sm font-semibold">{bdt(i.price)}</div>
                   <div className="mt-2 flex items-center gap-2">
                     <div className="inline-flex items-center rounded-full border">
@@ -59,7 +62,7 @@ function CartPage() {
           <h2 className="font-semibold">Order summary</h2>
           <dl className="mt-3 space-y-2 text-sm">
             <Row label="Subtotal" value={bdt(cart.subtotal)} />
-            <Row label={`Shipping${shipping === 0 ? " (free)" : ""}`} value={bdt(shipping)} />
+            <Row label={`Shipping${shipping === 0 ? " (free)" : " (Inside Dhaka)"}`} value={bdt(shipping)} />
             <div className="border-t pt-2 mt-2 flex justify-between font-semibold text-base">
               <span>Total</span><span>{bdt(total)}</span>
             </div>
