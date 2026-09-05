@@ -54,7 +54,28 @@ export const updateProductStock = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("products").update({ stock: data.stock }).eq("id", data.id);
     if (error) throw new Error(error.message);
-    return { ok: true as const };
+
+    // Auto restock notifications: anyone waiting for this product gets queued a message.
+    let notified = 0;
+    if (data.stock > 0) {
+      const { data: alerts } = await supabaseAdmin
+        .from("stock_alerts").select("*").eq("product_id", data.id).eq("notified", false);
+      if (alerts?.length) {
+        const { data: product } = await supabaseAdmin
+          .from("products").select("name, slug").eq("id", data.id).maybeSingle();
+        await supabaseAdmin.from("notifications").insert(
+          alerts.map((a: any) => ({
+            channel: a.email ? "email" : "sms",
+            recipient: a.email ?? a.phone,
+            subject: `${product?.name ?? "Your product"} is back in stock`,
+            body: `Good news! ${product?.name ?? "The item"} is available again at GochaoBD. Order now: /product/${product?.slug ?? ""}`,
+          })),
+        );
+        await supabaseAdmin.from("stock_alerts").update({ notified: true }).eq("product_id", data.id).eq("notified", false);
+        notified = alerts.length;
+      }
+    }
+    return { ok: true as const, notified };
   });
 
 /* ---------------- Catalog management ---------------- */
