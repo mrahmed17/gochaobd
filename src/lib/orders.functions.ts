@@ -161,5 +161,14 @@ export const placeOrder = createServerFn({ method: "POST" })
       });
     }
 
+    // Loyalty: 1 point per ৳100 spent, and clear any abandoned-cart record.
+    if (userId) {
+      const { data: loy } = await supabaseAdmin.from("loyalty").select("points").eq("user_id", userId).maybeSingle();
+      const earned = Math.floor(total / 100);
+      if (loy) await supabaseAdmin.from("loyalty").update({ points: (loy.points ?? 0) + earned }).eq("user_id", userId);
+      else await supabaseAdmin.from("loyalty").insert({ user_id: userId, points: earned });
+      await supabaseAdmin.from("abandoned_carts").update({ recovered: true }).eq("user_id", userId).eq("recovered", false);
+    }
+
     return { orderNumber: order.order_number, total, subtotal, shipping, discount };
   });
