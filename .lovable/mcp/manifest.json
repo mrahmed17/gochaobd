@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "sdk_version": "2.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://vfuxoepdjacfuocbbzpe.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "gochaobd-home-organizer-hub",
+      "version": "0.1.0",
+      "title": "GochaoBD: Home Organizer Hub"
+    },
+    "tools": [
+      {
+        "name": "search_products",
+        "title": "Search products",
+        "description": "Search the GochaoBD catalog by keyword and return matching products with price and stock.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search keyword, e.g. 'kitchen rack'. Empty returns featured products."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Maximum number of products to return (1-50). Defaults to 10."
+            }
+          },
+          "required": [
+            "query",
+            "limit"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_product",
+        "title": "Get product details",
+        "description": "Fetch full details and variants for one GochaoBD product by its slug.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "description": "Product slug, e.g. 'bamboo-spice-rack'."
+            }
+          },
+          "required": [
+            "slug"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_orders",
+        "title": "List my orders",
+        "description": "List the signed-in customer's GochaoBD orders with status and totals, newest first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Maximum number of orders to return (1-50). Defaults to 10."
+            }
+          },
+          "required": [
+            "limit"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_order",
+        "title": "Get my order",
+        "description": "Fetch one of the signed-in customer's orders, including its items, by order number.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "order_number": {
+              "type": "string",
+              "description": "The order number, e.g. 'GCB-10231'."
+            }
+          },
+          "required": [
+            "order_number"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_wishlist",
+        "title": "List my wishlist",
+        "description": "List the products saved to the signed-in customer's GochaoBD wishlist.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Maximum number of items to return (1-100). Defaults to 25."
+            }
+          },
+          "required": [
+            "limit"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_to_wishlist",
+        "title": "Add product to wishlist",
+        "description": "Save a product to the signed-in customer's GochaoBD wishlist, by product slug.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "description": "Product slug to save, e.g. 'bamboo-spice-rack'."
+            }
+          },
+          "required": [
+            "slug"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
