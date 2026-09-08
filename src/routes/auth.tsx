@@ -7,23 +7,33 @@ import { toast } from "sonner";
 import { Loader2, Mail, Chrome } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
+  }),
   head: () => ({ meta: [{ title: "Sign in — GochaoBD" }, { name: "robots", content: "noindex" }] }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const nav = useNavigate();
+  const { next } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function goNext() {
+    if (next) { window.location.href = next; return; }
+    nav({ to: "/account", replace: true });
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/account", replace: true });
+      if (data.session) goNext();
     });
-  }, [nav]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav, next]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
