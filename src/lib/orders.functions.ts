@@ -58,7 +58,7 @@ export const placeOrder = createServerFn({ method: "POST" })
     const ids = [...new Set(data.items.map((i) => i.productId))];
     const { data: products, error: pErr } = await supabaseAdmin
       .from("products")
-      .select("id, name, images, price_bdt, flash_price_bdt")
+      .select("id, name, images, price_bdt, flash_price_bdt, store_id")
       .in("id", ids);
     if (pErr) throw new Error("Could not verify products");
     const byId = new Map((products ?? []).map((p) => [p.id, p]));
