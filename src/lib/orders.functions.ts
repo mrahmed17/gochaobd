@@ -122,10 +122,15 @@ export const placeOrder = createServerFn({ method: "POST" })
       userEmail = u.user?.email ?? null;
     }
 
+    // Which store (brand) does this order belong to? Taken from the first product.
+    const storeId = (products ?? []).find((p: any) => p.store_id)?.store_id ?? null;
+    const online = data.customer.payment !== "cod";
+
     const { data: order, error: oErr } = await supabaseAdmin
       .from("orders")
       .insert({
         user_id: userId,
+        store_id: storeId,
         guest_email: userEmail ?? (data.customer.email || null),
         customer_name: data.customer.name,
         customer_phone: data.customer.phone,
@@ -135,6 +140,8 @@ export const placeOrder = createServerFn({ method: "POST" })
         delivery_zone: data.customer.zone,
         notes: data.customer.notes || null,
         payment_method: data.customer.payment,
+        payment_provider: online ? data.customer.payment : null,
+        payment_status: online ? "awaiting" : "pending",
         subtotal_bdt: subtotal,
         shipping_bdt: shipping,
         discount_bdt: discount,
