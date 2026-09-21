@@ -43,20 +43,62 @@ export interface Category {
   image_url: string | null;
 }
 
-export const categoriesQuery = () =>
+export interface Store {
+  id: string;
+  slug: string;
+  name: string;
+  tagline: string | null;
+  description: string | null;
+  theme_color: string;
+  accent_color: string;
+  logo_url: string | null;
+  active: boolean;
+}
+
+export const storesQuery = () =>
   queryOptions({
-    queryKey: ["categories"],
+    queryKey: ["stores"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("categories")
-        .select("id, slug, name, image_url")
+        .from("stores")
+        .select("id, slug, name, tagline, description, theme_color, accent_color, logo_url, active")
+        .eq("active", true)
         .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as Store[];
+    },
+  });
+
+export const storeBySlugQuery = (slug: string) =>
+  queryOptions({
+    queryKey: ["store", slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("id, slug, name, tagline, description, theme_color, accent_color, logo_url, active")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Store | null;
+    },
+  });
+
+export const categoriesQuery = (storeSlug?: string) =>
+  queryOptions({
+    queryKey: ["categories", storeSlug ?? "all"],
+    queryFn: async () => {
+      let q = supabase.from("categories").select("id, slug, name, image_url");
+      if (storeSlug) {
+        const { data: s } = await supabase.from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+        if (s) q = q.eq("store_id", s.id);
+      }
+      const { data, error } = await q.order("sort_order");
       if (error) throw error;
       return data as Category[];
     },
   });
 
-export const productsQuery = (filter?: { categorySlug?: string; flash?: boolean; featured?: boolean; isNew?: boolean; search?: string }) =>
+export const productsQuery = (filter?: { categorySlug?: string; storeSlug?: string; flash?: boolean; featured?: boolean; isNew?: boolean; search?: string }) =>
   queryOptions({
     queryKey: ["products", filter ?? {}],
     queryFn: async () => {
@@ -65,6 +107,10 @@ export const productsQuery = (filter?: { categorySlug?: string; flash?: boolean;
       if (filter?.featured) q = q.eq("is_featured", true);
       if (filter?.isNew) q = q.eq("is_new", true);
       if (filter?.search) q = q.ilike("name", `%${filter.search}%`);
+      if (filter?.storeSlug) {
+        const { data: s } = await supabase.from("stores").select("id").eq("slug", filter.storeSlug).maybeSingle();
+        if (s) q = q.eq("store_id", s.id);
+      }
       if (filter?.categorySlug) {
         const { data: cat } = await supabase.from("categories").select("id").eq("slug", filter.categorySlug).maybeSingle();
         if (cat) q = q.eq("category_id", cat.id);

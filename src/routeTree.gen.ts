@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as TrackRouteImport } from './routes/track'
+import { Route as StoresRouteImport } from './routes/stores'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SearchRouteImport } from './routes/search'
@@ -27,7 +28,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StoreSlugRouteImport } from './routes/store.$slug'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
+import { Route as PayNumberRouteImport } from './routes/pay.$number'
 import { Route as OrderSuccessNumberRouteImport } from './routes/order-success.$number'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -41,6 +44,11 @@ const WishlistRoute = WishlistRouteImport.update({
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
   path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoresRoute = StoresRouteImport.update({
+  id: '/stores',
+  path: '/stores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -123,9 +131,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StoreSlugRoute = StoreSlugRouteImport.update({
+  id: '/store/$slug',
+  path: '/store/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductSlugRoute = ProductSlugRouteImport.update({
   id: '/product/$slug',
   path: '/product/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PayNumberRoute = PayNumberRouteImport.update({
+  id: '/pay/$number',
+  path: '/pay/$number',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrderSuccessNumberRoute = OrderSuccessNumberRouteImport.update({
@@ -167,12 +185,15 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stores': typeof StoresRoute
   '/track': typeof TrackRoute
   '/wishlist': typeof WishlistRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/order-success/$number': typeof OrderSuccessNumberRoute
+  '/pay/$number': typeof PayNumberRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/store/$slug': typeof StoreSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesByTo {
@@ -192,12 +213,15 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stores': typeof StoresRoute
   '/track': typeof TrackRoute
   '/wishlist': typeof WishlistRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/order-success/$number': typeof OrderSuccessNumberRoute
+  '/pay/$number': typeof PayNumberRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/store/$slug': typeof StoreSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesById {
@@ -218,12 +242,15 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stores': typeof StoresRoute
   '/track': typeof TrackRoute
   '/wishlist': typeof WishlistRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/order-success/$number': typeof OrderSuccessNumberRoute
+  '/pay/$number': typeof PayNumberRoute
   '/product/$slug': typeof ProductSlugRoute
+  '/store/$slug': typeof StoreSlugRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRouteTypes {
@@ -245,12 +272,15 @@ export interface FileRouteTypes {
     | '/search'
     | '/shop'
     | '/sitemap.xml'
+    | '/stores'
     | '/track'
     | '/wishlist'
     | '/.well-known/oauth-protected-resource'
     | '/category/$slug'
     | '/order-success/$number'
+    | '/pay/$number'
     | '/product/$slug'
+    | '/store/$slug'
     | '/.lovable/oauth/consent'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -270,12 +300,15 @@ export interface FileRouteTypes {
     | '/search'
     | '/shop'
     | '/sitemap.xml'
+    | '/stores'
     | '/track'
     | '/wishlist'
     | '/.well-known/oauth-protected-resource'
     | '/category/$slug'
     | '/order-success/$number'
+    | '/pay/$number'
     | '/product/$slug'
+    | '/store/$slug'
     | '/.lovable/oauth/consent'
   id:
     | '__root__'
@@ -295,12 +328,15 @@ export interface FileRouteTypes {
     | '/search'
     | '/shop'
     | '/sitemap.xml'
+    | '/stores'
     | '/track'
     | '/wishlist'
     | '/.well-known/oauth-protected-resource'
     | '/category/$slug'
     | '/order-success/$number'
+    | '/pay/$number'
     | '/product/$slug'
+    | '/store/$slug'
     | '/.lovable/oauth/consent'
   fileRoutesById: FileRoutesById
 }
@@ -321,12 +357,15 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StoresRoute: typeof StoresRoute
   TrackRoute: typeof TrackRoute
   WishlistRoute: typeof WishlistRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CategorySlugRoute: typeof CategorySlugRoute
   OrderSuccessNumberRoute: typeof OrderSuccessNumberRoute
+  PayNumberRoute: typeof PayNumberRoute
   ProductSlugRoute: typeof ProductSlugRoute
+  StoreSlugRoute: typeof StoreSlugRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
@@ -344,6 +383,13 @@ declare module '@tanstack/react-router' {
       path: '/track'
       fullPath: '/track'
       preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stores': {
+      id: '/stores'
+      path: '/stores'
+      fullPath: '/stores'
+      preLoaderRoute: typeof StoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -458,11 +504,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/store/$slug': {
+      id: '/store/$slug'
+      path: '/store/$slug'
+      fullPath: '/store/$slug'
+      preLoaderRoute: typeof StoreSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product/$slug': {
       id: '/product/$slug'
       path: '/product/$slug'
       fullPath: '/product/$slug'
       preLoaderRoute: typeof ProductSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pay/$number': {
+      id: '/pay/$number'
+      path: '/pay/$number'
+      fullPath: '/pay/$number'
+      preLoaderRoute: typeof PayNumberRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/order-success/$number': {
@@ -513,13 +573,16 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StoresRoute: StoresRoute,
   TrackRoute: TrackRoute,
   WishlistRoute: WishlistRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CategorySlugRoute: CategorySlugRoute,
   OrderSuccessNumberRoute: OrderSuccessNumberRoute,
+  PayNumberRoute: PayNumberRoute,
   ProductSlugRoute: ProductSlugRoute,
+  StoreSlugRoute: StoreSlugRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport

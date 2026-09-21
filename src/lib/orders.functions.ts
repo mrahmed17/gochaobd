@@ -58,7 +58,7 @@ export const placeOrder = createServerFn({ method: "POST" })
     const ids = [...new Set(data.items.map((i) => i.productId))];
     const { data: products, error: pErr } = await supabaseAdmin
       .from("products")
-      .select("id, name, images, price_bdt, flash_price_bdt")
+      .select("id, name, images, price_bdt, flash_price_bdt, store_id")
       .in("id", ids);
     if (pErr) throw new Error("Could not verify products");
     const byId = new Map((products ?? []).map((p) => [p.id, p]));
@@ -122,10 +122,15 @@ export const placeOrder = createServerFn({ method: "POST" })
       userEmail = u.user?.email ?? null;
     }
 
+    // Which store (brand) does this order belong to? Taken from the first product.
+    const storeId = (products ?? []).find((p: any) => p.store_id)?.store_id ?? null;
+    const online = data.customer.payment !== "cod";
+
     const { data: order, error: oErr } = await supabaseAdmin
       .from("orders")
       .insert({
         user_id: userId,
+        store_id: storeId,
         guest_email: userEmail ?? (data.customer.email || null),
         customer_name: data.customer.name,
         customer_phone: data.customer.phone,
@@ -135,6 +140,8 @@ export const placeOrder = createServerFn({ method: "POST" })
         delivery_zone: data.customer.zone,
         notes: data.customer.notes || null,
         payment_method: data.customer.payment,
+        payment_provider: online ? data.customer.payment : null,
+        payment_status: online ? "awaiting" : "pending",
         subtotal_bdt: subtotal,
         shipping_bdt: shipping,
         discount_bdt: discount,
@@ -158,6 +165,8 @@ export const placeOrder = createServerFn({ method: "POST" })
         recipient,
         subject: `Order ${order.order_number} confirmed`,
         body: `Thank you ${data.customer.name}! Your GochaoBD order ${order.order_number} for ৳${total} is confirmed. Payment: ${data.customer.payment.toUpperCase()}.`,
+        // Sandbox mode: messages are recorded here until a real email/SMS provider is connected.
+        status: "sandbox",
       });
     }
 
@@ -170,5 +179,64 @@ export const placeOrder = createServerFn({ method: "POST" })
       await supabaseAdmin.from("abandoned_carts").update({ recovered: true }).eq("user_id", userId).eq("recovered", false);
     }
 
-    return { orderNumber: order.order_number, total, subtotal, shipping, discount };
+    return {
+      orderNumber: order.order_number,
+      total, subtotal, shipping, discount,
+      requiresPayment: online,
+      provider: online ? data.customer.payment : null,
+    };
+  });
+
+/* ---------------- Sandbox mobile payments (bKash / Nagad) ----------------
+   Test-mode only: no real money moves. Replace these two handlers with the
+   provider's checkout + verify calls once live merchant credentials exist. */
+
+export const getPaymentSession = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ orderNumber: z.string().trim().min(4).max(40) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: o } = await supabaseAdmin
+      .from("orders")
+      .select("order_number, total_bdt, payment_method, payment_status, payment_ref, customer_name")
+      .eq("order_number", data.orderNumber.toUpperCase())
+      .maybeSingle();
+    if (!o) throw new Error("Order not found");
+    return o;
+  });
+
+export const confirmSandboxPayment = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z.object({
+      orderNumber: z.string().trim().min(4).max(40),
+      senderNumber: z.string().trim().min(6).max(20),
+      trxId: z.string().trim().min(4).max(40),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const number = data.orderNumber.toUpperCase();
+    const { data: o } = await supabaseAdmin
+      .from("orders")
+      .select("id, payment_status, payment_method, total_bdt")
+      .eq("order_number", number)
+      .maybeSingle();
+    if (!o) throw new Error("Order not found");
+    if (o.payment_status === "paid") return { ok: true as const, alreadyPaid: true };
+
+    const ref = `SBX-${data.trxId.toUpperCase()}`;
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({ payment_status: "paid", payment_ref: ref, status: "confirmed" })
+      .eq("id", o.id);
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("notifications").insert({
+      order_id: o.id,
+      channel: "sms",
+      recipient: data.senderNumber,
+      subject: `Payment received for ${number}`,
+      body: `Sandbox ${o.payment_method.toUpperCase()} payment of ৳${o.total_bdt} received. Reference ${ref}.`,
+      status: "sandbox",
+    });
+    return { ok: true as const, alreadyPaid: false, reference: ref };
   });
