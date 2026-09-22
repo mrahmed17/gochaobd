@@ -288,6 +288,13 @@ function AdminPage() {
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </label>
+                  <label className="block">
+                    <span className="text-xs text-muted-foreground">Store / brand</span>
+                    <select value={editing.store_id ?? ""} onChange={(e) => setEditing({ ...editing, store_id: e.target.value || null })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background">
+                      <option value="">— none —</option>
+                      {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </label>
                   <F label="Image paths (comma separated)" value={Array.isArray(editing.images) ? editing.images.join(", ") : editing.images ?? ""} onChange={(v) => setEditing({ ...editing, images: v })} className="sm:col-span-2" />
                   <F label="Video URL" value={editing.video_url ?? ""} onChange={(v) => setEditing({ ...editing, video_url: v })} className="sm:col-span-2" />
                   <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
