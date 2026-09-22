@@ -46,6 +46,8 @@ function AdminPage() {
   const [variants, setVariants] = useState<any[]>([]);
   const [catForm, setCatForm] = useState<any>(null);
   const [couponForm, setCouponForm] = useState<any>(null);
+  const [stores, setStores] = useState<any[]>([]);
+  const [storeForm, setStoreForm] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
