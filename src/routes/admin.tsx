@@ -6,6 +6,7 @@ import {
   verifyAdmin, getAdminData, updateOrderStatus, updateProductStock,
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
+  saveStore, deleteStore,
 } from "@/lib/admin.functions";
 import { bdt } from "@/lib/format";
 import { toast } from "sonner";
@@ -16,12 +17,17 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "marketing";
+type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "stores" | "marketing";
 
 const emptyProduct = {
   slug: "", name: "", description: "", specs: "", price_bdt: 0, compare_price_bdt: null,
-  stock: 0, category_id: null, images: [] as string[], video_url: "", is_featured: false,
+  stock: 0, category_id: null, store_id: null, images: [] as string[], video_url: "", is_featured: false,
   is_new: true, is_flash_sale: false, flash_price_bdt: null,
+};
+
+const emptyStore = {
+  slug: "", name: "", tagline: "", description: "", theme_color: "#1f7a4d",
+  accent_color: "#f97316", logo_url: "", active: true, sort_order: 0,
 };
 
 function AdminPage() {
