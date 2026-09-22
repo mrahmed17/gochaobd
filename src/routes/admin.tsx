@@ -158,7 +158,7 @@ function AdminPage() {
   async function submitCategory(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await saveCategory({ data: { ...(catForm.id ? { id: catForm.id } : {}), slug: catForm.slug.trim(), name: catForm.name.trim(), image_url: catForm.image_url || null, sort_order: Number(catForm.sort_order) || 0 } });
+      await saveCategory({ data: { ...(catForm.id ? { id: catForm.id } : {}), slug: catForm.slug.trim(), name: catForm.name.trim(), image_url: catForm.image_url || null, sort_order: Number(catForm.sort_order) || 0, store_id: catForm.store_id || null } });
       toast.success("Category saved"); setCatForm(null); reload();
     } catch (e: any) { toast.error(e.message ?? "Save failed"); }
   }
