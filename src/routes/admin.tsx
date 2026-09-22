@@ -6,6 +6,7 @@ import {
   verifyAdmin, getAdminData, updateOrderStatus, updateProductStock,
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
+  saveStore, deleteStore,
 } from "@/lib/admin.functions";
 import { bdt } from "@/lib/format";
 import { toast } from "sonner";
@@ -16,12 +17,17 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "marketing";
+type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "stores" | "marketing";
 
 const emptyProduct = {
   slug: "", name: "", description: "", specs: "", price_bdt: 0, compare_price_bdt: null,
-  stock: 0, category_id: null, images: [] as string[], video_url: "", is_featured: false,
+  stock: 0, category_id: null, store_id: null, images: [] as string[], video_url: "", is_featured: false,
   is_new: true, is_flash_sale: false, flash_price_bdt: null,
+};
+
+const emptyStore = {
+  slug: "", name: "", tagline: "", description: "", theme_color: "#1f7a4d",
+  accent_color: "#f97316", logo_url: "", active: true, sort_order: 0,
 };
 
 function AdminPage() {
@@ -40,6 +46,8 @@ function AdminPage() {
   const [variants, setVariants] = useState<any[]>([]);
   const [catForm, setCatForm] = useState<any>(null);
   const [couponForm, setCouponForm] = useState<any>(null);
+  const [stores, setStores] = useState<any[]>([]);
+  const [storeForm, setStoreForm] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -59,8 +67,8 @@ function AdminPage() {
 
   async function reload() {
     try {
-      const [{ orders: o, products: p, coupons: c }, m] = await Promise.all([getAdminData(), getMarketingData()]);
-      setOrders(o); setProducts(p); setCoupons(c);
+      const [{ orders: o, products: p, coupons: c, stores: st }, m] = await Promise.all([getAdminData(), getMarketingData()]);
+      setOrders(o); setProducts(p); setCoupons(c); setStores(st ?? []);
       setCategories(m.categories); setAlerts(m.alerts); setCarts(m.carts); setNotifications(m.notifications);
       setStats({
         revenue: o.reduce((s: number, x: any) => s + x.total_bdt, 0),
@@ -107,6 +115,7 @@ function AdminPage() {
         compare_price_bdt: editing.compare_price_bdt ? Number(editing.compare_price_bdt) : null,
         stock: Number(editing.stock) || 0,
         category_id: editing.category_id || null,
+        store_id: editing.store_id || null,
         images: Array.isArray(editing.images) ? editing.images : String(editing.images || "").split(",").map((s: string) => s.trim()).filter(Boolean),
         video_url: editing.video_url || null,
         is_featured: !!editing.is_featured,
@@ -149,7 +158,7 @@ function AdminPage() {
   async function submitCategory(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await saveCategory({ data: { ...(catForm.id ? { id: catForm.id } : {}), slug: catForm.slug.trim(), name: catForm.name.trim(), image_url: catForm.image_url || null, sort_order: Number(catForm.sort_order) || 0 } });
+      await saveCategory({ data: { ...(catForm.id ? { id: catForm.id } : {}), slug: catForm.slug.trim(), name: catForm.name.trim(), image_url: catForm.image_url || null, sort_order: Number(catForm.sort_order) || 0, store_id: catForm.store_id || null } });
       toast.success("Category saved"); setCatForm(null); reload();
     } catch (e: any) { toast.error(e.message ?? "Save failed"); }
   }
@@ -162,6 +171,33 @@ function AdminPage() {
     } catch (e: any) { toast.error(e.message ?? "Save failed"); }
   }
 
+  async function submitStore(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await saveStore({
+        data: {
+          ...(storeForm.id ? { id: storeForm.id } : {}),
+          slug: storeForm.slug.trim().toLowerCase(),
+          name: storeForm.name.trim(),
+          tagline: storeForm.tagline || null,
+          description: storeForm.description || null,
+          theme_color: storeForm.theme_color || "#1f7a4d",
+          accent_color: storeForm.accent_color || "#f97316",
+          logo_url: storeForm.logo_url || null,
+          active: !!storeForm.active,
+          sort_order: Number(storeForm.sort_order) || 0,
+        },
+      });
+      toast.success("Store saved"); setStoreForm(null); reload();
+    } catch (e: any) { toast.error(e.message ?? "Save failed"); }
+  }
+
+  async function removeStore(id: string) {
+    try { await deleteStore({ data: { id } }); toast.success("Store deleted"); setStoreForm(null); reload(); }
+    catch (e: any) { toast.error(e.message ?? "Delete failed"); }
+  }
+
+
   if (!ready) return <AppShell><div className="p-8 text-sm">Checking access…</div></AppShell>;
 
   return (
@@ -172,7 +208,7 @@ function AdminPage() {
           <Link to="/" className="text-sm text-brand">← Back to store</Link>
         </div>
         <div className="mt-4 flex gap-2 border-b -mx-4 px-4 overflow-x-auto">
-          {(["dash", "orders", "products", "categories", "coupons", "marketing"] as const).map((t) => (
+          {(["dash", "orders", "products", "categories", "coupons", "stores", "marketing"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap px-4 py-2 text-sm capitalize border-b-2 ${tab === t ? "border-brand text-brand" : "border-transparent text-muted-foreground"}`}>
               {t === "dash" ? "Dashboard" : t}
             </button>
@@ -252,6 +288,13 @@ function AdminPage() {
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </label>
+                  <label className="block">
+                    <span className="text-xs text-muted-foreground">Store / brand</span>
+                    <select value={editing.store_id ?? ""} onChange={(e) => setEditing({ ...editing, store_id: e.target.value || null })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background">
+                      <option value="">— none —</option>
+                      {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </label>
                   <F label="Image paths (comma separated)" value={Array.isArray(editing.images) ? editing.images.join(", ") : editing.images ?? ""} onChange={(v) => setEditing({ ...editing, images: v })} className="sm:col-span-2" />
                   <F label="Video URL" value={editing.video_url ?? ""} onChange={(v) => setEditing({ ...editing, video_url: v })} className="sm:col-span-2" />
                   <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
@@ -318,6 +361,13 @@ function AdminPage() {
                   <F label="Slug" value={catForm.slug} onChange={(v) => setCatForm({ ...catForm, slug: v })} required />
                   <F label="Image path" value={catForm.image_url ?? ""} onChange={(v) => setCatForm({ ...catForm, image_url: v })} />
                   <F label="Sort order" type="number" value={catForm.sort_order ?? 0} onChange={(v) => setCatForm({ ...catForm, sort_order: v })} />
+                  <label className="block">
+                    <span className="text-xs text-muted-foreground">Store / brand</span>
+                    <select value={catForm.store_id ?? ""} onChange={(e) => setCatForm({ ...catForm, store_id: e.target.value || null })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background">
+                      <option value="">— none —</option>
+                      {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </label>
                 </div>
                 <div className="flex gap-2">
                   <button className="rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm font-medium">Save</button>
@@ -369,6 +419,56 @@ function AdminPage() {
             )}
           </div>
         )}
+
+        {tab === "stores" && (
+          <div className="mt-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Each store is a separate brand (baby, beauty, kitchen…) sharing this admin panel, inventory and customer base.
+            </p>
+            <button onClick={() => setStoreForm({ ...emptyStore })} className="inline-flex items-center gap-2 rounded-full bg-brand text-brand-foreground px-4 py-2 text-sm font-medium"><Plus className="h-4 w-4" />New store</button>
+            <ul className="rounded-2xl border bg-card divide-y">
+              {stores.map((s) => (
+                <li key={s.id} className="p-3 flex items-center gap-3 text-sm">
+                  <div className="h-8 w-8 rounded-lg shrink-0" style={{ background: `linear-gradient(135deg, ${s.theme_color}, ${s.accent_color})` }} />
+                  <div>
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">/store/{s.slug} · {products.filter((p) => p.store_id === s.id).length} products</div>
+                  </div>
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${s.active ? "bg-brand text-brand-foreground" : "bg-muted-foreground/20"}`}>{s.active ? "active" : "hidden"}</span>
+                  <button onClick={() => setStoreForm(s)} className="text-xs text-brand">Edit</button>
+                </li>
+              ))}
+            </ul>
+            {storeForm && (
+              <form onSubmit={submitStore} className="rounded-2xl border bg-card p-4 space-y-3">
+                <h2 className="font-semibold">{storeForm.id ? "Edit store" : "New store"}</h2>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <F label="Name" value={storeForm.name} onChange={(v) => setStoreForm({ ...storeForm, name: v })} required />
+                  <F label="Slug (url)" value={storeForm.slug} onChange={(v) => setStoreForm({ ...storeForm, slug: v })} required />
+                  <F label="Tagline" value={storeForm.tagline ?? ""} onChange={(v) => setStoreForm({ ...storeForm, tagline: v })} className="sm:col-span-2" />
+                  <F label="Primary colour" value={storeForm.theme_color} onChange={(v) => setStoreForm({ ...storeForm, theme_color: v })} />
+                  <F label="Accent colour" value={storeForm.accent_color} onChange={(v) => setStoreForm({ ...storeForm, accent_color: v })} />
+                  <F label="Logo URL" value={storeForm.logo_url ?? ""} onChange={(v) => setStoreForm({ ...storeForm, logo_url: v })} />
+                  <F label="Sort order" type="number" value={storeForm.sort_order ?? 0} onChange={(v) => setStoreForm({ ...storeForm, sort_order: v })} />
+                  <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
+                    <textarea value={storeForm.description ?? ""} onChange={(e) => setStoreForm({ ...storeForm, description: e.target.value })} rows={2} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background" />
+                  </label>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={!!storeForm.active} onChange={(e) => setStoreForm({ ...storeForm, active: e.target.checked })} className="accent-[--color-brand]" />Visible to shoppers
+                </label>
+                <div className="flex gap-2">
+                  <button className="rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm font-medium">Save store</button>
+                  <button type="button" onClick={() => setStoreForm(null)} className="rounded-full border px-5 py-2 text-sm">Cancel</button>
+                  {storeForm.id && storeForm.slug !== "home" && (
+                    <button type="button" onClick={() => removeStore(storeForm.id)} className="ml-auto rounded-full border border-destructive text-destructive px-5 py-2 text-sm">Delete</button>
+                  )}
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
 
         {tab === "marketing" && (
           <div className="mt-6 grid md:grid-cols-2 gap-4">

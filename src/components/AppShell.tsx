@@ -104,6 +104,7 @@ export function Footer() {
           <ul className="space-y-2 text-muted-foreground">
             <li><Link to="/shop">All products</Link></li>
             <li><Link to="/categories">Categories</Link></li>
+            <li><Link to="/stores">Our brands</Link></li>
             <li><Link to="/track">Track order</Link></li>
             <li><Link to="/wishlist">Wishlist</Link></li>
           </ul>

@@ -66,7 +66,8 @@ function CheckoutPage() {
 
       track("purchase", { transaction_id: result.orderNumber, value: result.total, currency: "BDT", items: cart.items.length });
       cart.clear();
-      nav({ to: "/order-success/$number", params: { number: result.orderNumber } });
+      if (result.requiresPayment) nav({ to: "/pay/$number", params: { number: result.orderNumber } });
+      else nav({ to: "/order-success/$number", params: { number: result.orderNumber } });
 
     } catch (err: any) {
       toast.error(err.message ?? "Could not place order");

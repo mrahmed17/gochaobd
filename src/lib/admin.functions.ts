@@ -25,12 +25,13 @@ export const getAdminData = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: orders }, { data: products }, { data: coupons }] = await Promise.all([
+    const [{ data: orders }, { data: products }, { data: coupons }, { data: stores }] = await Promise.all([
       supabaseAdmin.from("orders").select("*").order("created_at", { ascending: false }).limit(100),
       supabaseAdmin.from("products").select("*").order("created_at", { ascending: false }),
       supabaseAdmin.from("coupons").select("*"),
+      supabaseAdmin.from("stores").select("*").order("sort_order"),
     ]);
-    return { orders: orders ?? [], products: products ?? [], coupons: coupons ?? [] };
+    return { orders: orders ?? [], products: products ?? [], coupons: coupons ?? [], stores: stores ?? [] };
   });
 
 export const updateOrderStatus = createServerFn({ method: "POST" })
@@ -90,6 +91,7 @@ const productInput = z.object({
   compare_price_bdt: z.number().int().min(0).max(10000000).nullable().optional(),
   stock: z.number().int().min(0).max(100000),
   category_id: z.string().uuid().nullable().optional(),
+  store_id: z.string().uuid().nullable().optional(),
   images: z.array(z.string().max(500)).max(8).optional(),
   video_url: z.string().max(500).nullable().optional(),
   is_featured: z.boolean().optional(),
@@ -135,6 +137,7 @@ export const saveCategory = createServerFn({ method: "POST" })
       name: z.string().min(2).max(80),
       image_url: z.string().max(500).nullable().optional(),
       sort_order: z.number().int().min(0).max(999).optional(),
+      store_id: z.string().uuid().nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -286,5 +289,48 @@ export const sendCartReminder = createServerFn({ method: "POST" })
       body: `Your GochaoBD cart worth ৳${cart.subtotal_bdt} is still waiting. Complete your order today!`,
     });
     await supabaseAdmin.from("abandoned_carts").update({ recovered: true }).eq("id", data.id);
+    return { ok: true as const };
+  });
+
+/* ---------------- Stores (multi-brand) ---------------- */
+
+export const saveStore = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      id: z.string().uuid().optional(),
+      slug: z.string().min(2).max(40).regex(/^[a-z0-9-]+$/),
+      name: z.string().min(2).max(80),
+      tagline: z.string().max(160).nullable().optional(),
+      description: z.string().max(2000).nullable().optional(),
+      theme_color: z.string().max(20),
+      accent_color: z.string().max(20),
+      logo_url: z.string().max(500).nullable().optional(),
+      active: z.boolean(),
+      sort_order: z.number().int().min(0).max(999).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...fields } = data;
+    const q = id
+      ? supabaseAdmin.from("stores").update(fields).eq("id", id)
+      : supabaseAdmin.from("stores").insert(fields);
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+export const deleteStore = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: store } = await supabaseAdmin.from("stores").select("slug").eq("id", data.id).maybeSingle();
+    if (store?.slug === "home") throw new Error("The main Home store cannot be deleted");
+    const { error } = await supabaseAdmin.from("stores").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true as const };
   });
