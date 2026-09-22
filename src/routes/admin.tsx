@@ -67,8 +67,8 @@ function AdminPage() {
 
   async function reload() {
     try {
-      const [{ orders: o, products: p, coupons: c }, m] = await Promise.all([getAdminData(), getMarketingData()]);
-      setOrders(o); setProducts(p); setCoupons(c);
+      const [{ orders: o, products: p, coupons: c, stores: st }, m] = await Promise.all([getAdminData(), getMarketingData()]);
+      setOrders(o); setProducts(p); setCoupons(c); setStores(st ?? []);
       setCategories(m.categories); setAlerts(m.alerts); setCarts(m.carts); setNotifications(m.notifications);
       setStats({
         revenue: o.reduce((s: number, x: any) => s + x.total_bdt, 0),
