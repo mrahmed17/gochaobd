@@ -361,6 +361,13 @@ function AdminPage() {
                   <F label="Slug" value={catForm.slug} onChange={(v) => setCatForm({ ...catForm, slug: v })} required />
                   <F label="Image path" value={catForm.image_url ?? ""} onChange={(v) => setCatForm({ ...catForm, image_url: v })} />
                   <F label="Sort order" type="number" value={catForm.sort_order ?? 0} onChange={(v) => setCatForm({ ...catForm, sort_order: v })} />
+                  <label className="block">
+                    <span className="text-xs text-muted-foreground">Store / brand</span>
+                    <select value={catForm.store_id ?? ""} onChange={(e) => setCatForm({ ...catForm, store_id: e.target.value || null })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background">
+                      <option value="">— none —</option>
+                      {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </label>
                 </div>
                 <div className="flex gap-2">
                   <button className="rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm font-medium">Save</button>
