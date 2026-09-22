@@ -420,6 +420,56 @@ function AdminPage() {
           </div>
         )}
 
+        {tab === "stores" && (
+          <div className="mt-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Each store is a separate brand (baby, beauty, kitchen…) sharing this admin panel, inventory and customer base.
+            </p>
+            <button onClick={() => setStoreForm({ ...emptyStore })} className="inline-flex items-center gap-2 rounded-full bg-brand text-brand-foreground px-4 py-2 text-sm font-medium"><Plus className="h-4 w-4" />New store</button>
+            <ul className="rounded-2xl border bg-card divide-y">
+              {stores.map((s) => (
+                <li key={s.id} className="p-3 flex items-center gap-3 text-sm">
+                  <div className="h-8 w-8 rounded-lg shrink-0" style={{ background: `linear-gradient(135deg, ${s.theme_color}, ${s.accent_color})` }} />
+                  <div>
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">/store/{s.slug} · {products.filter((p) => p.store_id === s.id).length} products</div>
+                  </div>
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${s.active ? "bg-brand text-brand-foreground" : "bg-muted-foreground/20"}`}>{s.active ? "active" : "hidden"}</span>
+                  <button onClick={() => setStoreForm(s)} className="text-xs text-brand">Edit</button>
+                </li>
+              ))}
+            </ul>
+            {storeForm && (
+              <form onSubmit={submitStore} className="rounded-2xl border bg-card p-4 space-y-3">
+                <h2 className="font-semibold">{storeForm.id ? "Edit store" : "New store"}</h2>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <F label="Name" value={storeForm.name} onChange={(v) => setStoreForm({ ...storeForm, name: v })} required />
+                  <F label="Slug (url)" value={storeForm.slug} onChange={(v) => setStoreForm({ ...storeForm, slug: v })} required />
+                  <F label="Tagline" value={storeForm.tagline ?? ""} onChange={(v) => setStoreForm({ ...storeForm, tagline: v })} className="sm:col-span-2" />
+                  <F label="Primary colour" value={storeForm.theme_color} onChange={(v) => setStoreForm({ ...storeForm, theme_color: v })} />
+                  <F label="Accent colour" value={storeForm.accent_color} onChange={(v) => setStoreForm({ ...storeForm, accent_color: v })} />
+                  <F label="Logo URL" value={storeForm.logo_url ?? ""} onChange={(v) => setStoreForm({ ...storeForm, logo_url: v })} />
+                  <F label="Sort order" type="number" value={storeForm.sort_order ?? 0} onChange={(v) => setStoreForm({ ...storeForm, sort_order: v })} />
+                  <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
+                    <textarea value={storeForm.description ?? ""} onChange={(e) => setStoreForm({ ...storeForm, description: e.target.value })} rows={2} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background" />
+                  </label>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={!!storeForm.active} onChange={(e) => setStoreForm({ ...storeForm, active: e.target.checked })} className="accent-[--color-brand]" />Visible to shoppers
+                </label>
+                <div className="flex gap-2">
+                  <button className="rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm font-medium">Save store</button>
+                  <button type="button" onClick={() => setStoreForm(null)} className="rounded-full border px-5 py-2 text-sm">Cancel</button>
+                  {storeForm.id && storeForm.slug !== "home" && (
+                    <button type="button" onClick={() => removeStore(storeForm.id)} className="ml-auto rounded-full border border-destructive text-destructive px-5 py-2 text-sm">Delete</button>
+                  )}
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+
         {tab === "marketing" && (
           <div className="mt-6 grid md:grid-cols-2 gap-4">
             <section className="rounded-2xl border bg-card p-4">
