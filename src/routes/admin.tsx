@@ -208,7 +208,7 @@ function AdminPage() {
           <Link to="/" className="text-sm text-brand">← Back to store</Link>
         </div>
         <div className="mt-4 flex gap-2 border-b -mx-4 px-4 overflow-x-auto">
-          {(["dash", "orders", "products", "categories", "coupons", "marketing"] as const).map((t) => (
+          {(["dash", "orders", "products", "categories", "coupons", "stores", "marketing"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap px-4 py-2 text-sm capitalize border-b-2 ${tab === t ? "border-brand text-brand" : "border-transparent text-muted-foreground"}`}>
               {t === "dash" ? "Dashboard" : t}
             </button>
