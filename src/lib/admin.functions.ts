@@ -90,6 +90,7 @@ const productInput = z.object({
   compare_price_bdt: z.number().int().min(0).max(10000000).nullable().optional(),
   stock: z.number().int().min(0).max(100000),
   category_id: z.string().uuid().nullable().optional(),
+  store_id: z.string().uuid().nullable().optional(),
   images: z.array(z.string().max(500)).max(8).optional(),
   video_url: z.string().max(500).nullable().optional(),
   is_featured: z.boolean().optional(),
@@ -135,6 +136,7 @@ export const saveCategory = createServerFn({ method: "POST" })
       name: z.string().min(2).max(80),
       image_url: z.string().max(500).nullable().optional(),
       sort_order: z.number().int().min(0).max(999).optional(),
+      store_id: z.string().uuid().nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ context, data }) => {
