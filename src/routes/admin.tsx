@@ -171,6 +171,33 @@ function AdminPage() {
     } catch (e: any) { toast.error(e.message ?? "Save failed"); }
   }
 
+  async function submitStore(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await saveStore({
+        data: {
+          ...(storeForm.id ? { id: storeForm.id } : {}),
+          slug: storeForm.slug.trim().toLowerCase(),
+          name: storeForm.name.trim(),
+          tagline: storeForm.tagline || null,
+          description: storeForm.description || null,
+          theme_color: storeForm.theme_color || "#1f7a4d",
+          accent_color: storeForm.accent_color || "#f97316",
+          logo_url: storeForm.logo_url || null,
+          active: !!storeForm.active,
+          sort_order: Number(storeForm.sort_order) || 0,
+        },
+      });
+      toast.success("Store saved"); setStoreForm(null); reload();
+    } catch (e: any) { toast.error(e.message ?? "Save failed"); }
+  }
+
+  async function removeStore(id: string) {
+    try { await deleteStore({ data: { id } }); toast.success("Store deleted"); setStoreForm(null); reload(); }
+    catch (e: any) { toast.error(e.message ?? "Delete failed"); }
+  }
+
+
   if (!ready) return <AppShell><div className="p-8 text-sm">Checking access…</div></AppShell>;
 
   return (
