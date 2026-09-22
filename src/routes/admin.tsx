@@ -115,6 +115,7 @@ function AdminPage() {
         compare_price_bdt: editing.compare_price_bdt ? Number(editing.compare_price_bdt) : null,
         stock: Number(editing.stock) || 0,
         category_id: editing.category_id || null,
+        store_id: editing.store_id || null,
         images: Array.isArray(editing.images) ? editing.images : String(editing.images || "").split(",").map((s: string) => s.trim()).filter(Boolean),
         video_url: editing.video_url || null,
         is_featured: !!editing.is_featured,
