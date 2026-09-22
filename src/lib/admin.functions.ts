@@ -25,12 +25,13 @@ export const getAdminData = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: orders }, { data: products }, { data: coupons }] = await Promise.all([
+    const [{ data: orders }, { data: products }, { data: coupons }, { data: stores }] = await Promise.all([
       supabaseAdmin.from("orders").select("*").order("created_at", { ascending: false }).limit(100),
       supabaseAdmin.from("products").select("*").order("created_at", { ascending: false }),
       supabaseAdmin.from("coupons").select("*"),
+      supabaseAdmin.from("stores").select("*").order("sort_order"),
     ]);
-    return { orders: orders ?? [], products: products ?? [], coupons: coupons ?? [] };
+    return { orders: orders ?? [], products: products ?? [], coupons: coupons ?? [], stores: stores ?? [] };
   });
 
 export const updateOrderStatus = createServerFn({ method: "POST" })
