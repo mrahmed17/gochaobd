@@ -1,7 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, ShoppingBag, Search, Heart, User, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -13,8 +14,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
+function useSignedIn() {
+  const [user, setUser] = useState<{ email?: string } | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+    return () => data.subscription.unsubscribe();
+  }, []);
+  return user;
+}
+
 function TopBar() {
   const { count } = useCart();
+  const user = useSignedIn();
   return (
     <>
       <div className="bg-brand text-brand-foreground text-[11px] tracking-wide">
@@ -35,6 +47,14 @@ function TopBar() {
           >
             <Search className="h-4 w-4 shrink-0" />
             <span className="truncate">Search organizers, jars, racks…</span>
+          </Link>
+          <Link
+            to={user ? "/account" : "/auth"}
+            className="shrink-0 h-10 rounded-full hover:bg-muted px-2 flex items-center gap-1.5 text-sm"
+            aria-label={user ? "My account" : "Sign in"}
+          >
+            <User className={`h-5 w-5 ${user ? "text-brand" : ""}`} />
+            <span className="hidden md:inline max-w-[120px] truncate">{user ? user.email?.split("@")[0] : "Sign in"}</span>
           </Link>
           <Link
             to="/cart"
