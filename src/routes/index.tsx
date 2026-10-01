@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       context.queryClient.ensureQueryData(productsQuery({ isNew: true })),
     ]);
   },
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">Failed to load: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">Failed to load: {(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 

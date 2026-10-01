@@ -41,7 +41,7 @@ export const Route = createFileRoute("/category/$slug")({
     await context.queryClient.ensureQueryData(productsQuery({ categorySlug: params.slug }));
     return { cat };
   },
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
   notFoundComponent: () => (
     <AppShell><div className="p-8 text-center"><h1 className="font-display text-2xl">Category not found</h1><Link to="/categories" className="text-brand text-sm">Back to categories</Link></div></AppShell>
   ),
