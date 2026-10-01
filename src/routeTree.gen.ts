@@ -16,6 +16,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ReturnsRouteImport } from './routes/returns'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as FaqRouteImport } from './routes/faq'
@@ -69,6 +70,11 @@ const SearchRoute = SearchRouteImport.update({
 const ReturnsRoute = ReturnsRouteImport.update({
   id: '/returns',
   path: '/returns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/mcp': typeof McpRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/returns': typeof ReturnsRoute
   '/search': typeof SearchRoute
   '/shop': typeof ShopRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/mcp': typeof McpRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/returns': typeof ReturnsRoute
   '/search': typeof SearchRoute
   '/shop': typeof ShopRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/mcp': typeof McpRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/returns': typeof ReturnsRoute
   '/search': typeof SearchRoute
   '/shop': typeof ShopRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/mcp'
     | '/privacy'
+    | '/reset-password'
     | '/returns'
     | '/search'
     | '/shop'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/mcp'
     | '/privacy'
+    | '/reset-password'
     | '/returns'
     | '/search'
     | '/shop'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/mcp'
     | '/privacy'
+    | '/reset-password'
     | '/returns'
     | '/search'
     | '/shop'
@@ -353,6 +365,7 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   McpRoute: typeof McpRoute
   PrivacyRoute: typeof PrivacyRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ReturnsRoute: typeof ReturnsRoute
   SearchRoute: typeof SearchRoute
   ShopRoute: typeof ShopRoute
@@ -418,6 +431,13 @@ declare module '@tanstack/react-router' {
       path: '/returns'
       fullPath: '/returns'
       preLoaderRoute: typeof ReturnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -569,6 +589,7 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   McpRoute: McpRoute,
   PrivacyRoute: PrivacyRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ReturnsRoute: ReturnsRoute,
   SearchRoute: SearchRoute,
   ShopRoute: ShopRoute,
