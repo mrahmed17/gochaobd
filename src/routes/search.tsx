@@ -10,7 +10,7 @@ export const Route = createFileRoute("/search")({
   head: () => ({ meta: [{ title: "Search — GochaoBD" }] }),
   component: SearchPage,
   loader: ({ context }) => context.queryClient.ensureQueryData(productsQuery()),
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed: {(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 

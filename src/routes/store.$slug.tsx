@@ -26,7 +26,7 @@ export const Route = createFileRoute("/store/$slug")({
     ]);
   },
   component: StorePage,
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-6">Store not found</div>,
 });
 
