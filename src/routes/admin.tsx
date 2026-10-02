@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import {
   verifyAdmin, getAdminData, updateOrderStatus, updatePaymentStatus, updateProductStock,
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
-  saveStore, deleteStore,
+  saveStore, deleteStore, getCustomers, setAdminRole, getReviews, deleteReview,
+  deleteCategory, getOrderItems,
 } from "@/lib/admin.functions";
 import { bdt } from "@/lib/format";
 import { toast } from "sonner";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "stores" | "marketing";
+type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "stores" | "customers" | "reviews" | "marketing";
 
 const emptyProduct = {
   slug: "", name: "", description: "", specs: "", price_bdt: 0, compare_price_bdt: null,
@@ -48,6 +49,13 @@ function AdminPage() {
   const [couponForm, setCouponForm] = useState<any>(null);
   const [stores, setStores] = useState<any[]>([]);
   const [storeForm, setStoreForm] = useState<any>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [custQ, setCustQ] = useState("");
+  const [orderQ, setOrderQ] = useState("");
+  const [orderFilter, setOrderFilter] = useState("all");
+  const [openOrder, setOpenOrder] = useState<string | null>(null);
+  const [orderItems, setOrderItems] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     (async () => {
@@ -67,14 +75,20 @@ function AdminPage() {
 
   async function reload() {
     try {
-      const [{ orders: o, products: p, coupons: c, stores: st }, m] = await Promise.all([getAdminData(), getMarketingData()]);
+      const [{ orders: o, products: p, coupons: c, stores: st }, m, cu, rv] = await Promise.all([getAdminData(), getMarketingData(), getCustomers(), getReviews()]);
       setOrders(o); setProducts(p); setCoupons(c); setStores(st ?? []);
+      setCustomers(cu); setReviews(rv);
       setCategories(m.categories); setAlerts(m.alerts); setCarts(m.carts); setNotifications(m.notifications);
+      const live = o.filter((x: any) => x.status !== "cancelled");
+      const todayStr = new Date().toDateString();
       setStats({
-        revenue: o.reduce((s: number, x: any) => s + x.total_bdt, 0),
+        revenue: live.reduce((s: number, x: any) => s + x.total_bdt, 0),
+        today: live.filter((x: any) => new Date(x.created_at).toDateString() === todayStr).reduce((s: number, x: any) => s + x.total_bdt, 0),
         orders: o.length,
         products: p.length,
         pending: o.filter((x: any) => x.status === "pending").length,
+        verifying: o.filter((x: any) => x.payment_status === "verifying").length,
+        lowStock: p.filter((x: any) => x.stock <= 5).length,
       });
     } catch (e: any) {
       toast.error(e.message ?? "Could not load admin data");
@@ -202,6 +216,27 @@ function AdminPage() {
     catch (e: any) { toast.error(e.message ?? "Delete failed"); }
   }
 
+  async function toggleOrder(id: string) {
+    if (openOrder === id) { setOpenOrder(null); return; }
+    setOpenOrder(id);
+    if (!orderItems[id]) {
+      try { const rows = await getOrderItems({ data: { orderId: id } }); setOrderItems((m) => ({ ...m, [id]: rows })); }
+      catch (e: any) { toast.error(e.message); }
+    }
+  }
+
+  async function toggleAdmin(c: any) {
+    if (!confirm(c.is_admin ? `Remove admin access from ${c.email}?` : `Give admin access to ${c.email}?`)) return;
+    try { await setAdminRole({ data: { userId: c.id, admin: !c.is_admin } }); toast.success("Role updated"); reload(); }
+    catch (e: any) { toast.error(e.message ?? "Failed"); }
+  }
+
+  async function removeReview(id: string) {
+    if (!confirm("Delete this review?")) return;
+    try { await deleteReview({ data: { id } }); toast.success("Review deleted"); reload(); }
+    catch (e: any) { toast.error(e.message ?? "Failed"); }
+  }
+
 
   if (!ready) return <AppShell><div className="p-8 text-sm">Checking access…</div></AppShell>;
 
@@ -319,6 +354,7 @@ function AdminPage() {
               </tbody>
             </table>
             {!orders.length && <div className="p-8 text-center text-muted-foreground text-sm">No orders yet.</div>}
+          </div>
           </div>
         )}
 
