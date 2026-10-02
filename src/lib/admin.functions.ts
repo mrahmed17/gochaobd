@@ -349,3 +349,96 @@ export const deleteStore = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
+
+/* ---------------- Customers, reviews, order details ---------------- */
+
+export const getCustomers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: list }, { data: profiles }, { data: roles }, { data: orders }] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ perPage: 500 }),
+      supabaseAdmin.from("profiles").select("user_id, full_name, phone"),
+      supabaseAdmin.from("user_roles").select("user_id, role"),
+      supabaseAdmin.from("orders").select("user_id, total_bdt"),
+    ]);
+    return (list?.users ?? []).map((u) => {
+      const p = profiles?.find((x) => x.user_id === u.id);
+      const mine = orders?.filter((o) => o.user_id === u.id) ?? [];
+      return {
+        id: u.id,
+        email: u.email ?? "",
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+        full_name: p?.full_name ?? null,
+        phone: p?.phone ?? null,
+        is_admin: !!roles?.some((r) => r.user_id === u.id && r.role === "admin"),
+        order_count: mine.length,
+        spent_bdt: mine.reduce((s, o) => s + o.total_bdt, 0),
+      };
+    });
+  });
+
+export const setAdminRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ userId: z.string().uuid(), admin: z.boolean() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    if (data.userId === context.userId && !data.admin) throw new Error("You cannot remove your own admin access");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = data.admin
+      ? await supabaseAdmin.from("user_roles").upsert({ user_id: data.userId, role: "admin" }, { onConflict: "user_id,role" })
+      : await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId).eq("role", "admin");
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+export const getReviews = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.from("reviews").select("id, author_name, rating, comment, created_at, products(name, slug)").order("created_at", { ascending: false }).limit(200);
+    return data ?? [];
+  });
+
+export const deleteReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: r } = await supabaseAdmin.from("reviews").select("product_id").eq("id", data.id).maybeSingle();
+    const { error } = await supabaseAdmin.from("reviews").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    if (r?.product_id) {
+      const { data: rest } = await supabaseAdmin.from("reviews").select("rating").eq("product_id", r.product_id);
+      const n = rest?.length ?? 0;
+      const avg = n ? Math.round((rest!.reduce((s, x) => s + x.rating, 0) / n) * 10) / 10 : 0;
+      await supabaseAdmin.from("products").update({ rating: avg, review_count: n }).eq("id", r.product_id);
+    }
+    return { ok: true as const };
+  });
+
+export const deleteCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("products").update({ category_id: null }).eq("category_id", data.id);
+    const { error } = await supabaseAdmin.from("categories").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+export const getOrderItems = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ orderId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows } = await supabaseAdmin.from("order_items").select("id, product_name, variant_label, unit_price_bdt, qty").eq("order_id", data.orderId);
+    return rows ?? [];
+  });
