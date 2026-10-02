@@ -213,7 +213,7 @@ function AdminPage() {
           <Link to="/" className="text-sm text-brand">← Back to store</Link>
         </div>
         <div className="mt-4 flex gap-2 border-b -mx-4 px-4 overflow-x-auto">
-          {(["dash", "orders", "products", "categories", "coupons", "stores", "marketing"] as const).map((t) => (
+          {(["dash", "orders", "products", "categories", "coupons", "stores", "customers", "reviews", "marketing"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap px-4 py-2 text-sm capitalize border-b-2 ${tab === t ? "border-brand text-brand" : "border-transparent text-muted-foreground"}`}>
               {t === "dash" ? "Dashboard" : t}
             </button>
@@ -221,24 +221,60 @@ function AdminPage() {
         </div>
 
         {tab === "dash" && (
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat icon={TrendingUp} label="Revenue" value={bdt(stats.revenue || 0)} />
-            <Stat icon={ShoppingBag} label="Orders" value={stats.orders ?? 0} />
-            <Stat icon={Package} label="Products" value={stats.products ?? 0} />
-            <Stat icon={Users} label="Pending" value={stats.pending ?? 0} />
+          <div className="mt-6 space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Stat icon={TrendingUp} label="Revenue (excl. cancelled)" value={bdt(stats.revenue || 0)} />
+              <Stat icon={ShoppingBag} label="Orders" value={stats.orders ?? 0} />
+              <Stat icon={Package} label="Products" value={stats.products ?? 0} />
+              <Stat icon={Users} label="Customers" value={customers.length} />
+              <Stat icon={ShoppingBag} label="Pending orders" value={stats.pending ?? 0} />
+              <Stat icon={TrendingUp} label="Payments to verify" value={stats.verifying ?? 0} />
+              <Stat icon={Package} label="Low stock (≤5)" value={stats.lowStock ?? 0} />
+              <Stat icon={TrendingUp} label="Today's sales" value={bdt(stats.today || 0)} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <section className="rounded-2xl border bg-card p-4">
+                <h2 className="font-semibold">Recent orders</h2>
+                <ul className="mt-2 divide-y text-sm">
+                  {orders.slice(0, 6).map((o) => (
+                    <li key={o.id} className="py-2 flex justify-between gap-2"><span className="font-mono text-xs">{o.order_number}<span className="ml-2 font-sans text-muted-foreground">{o.customer_name}</span></span><span>{bdt(o.total_bdt)} · <span className="capitalize">{o.status}</span></span></li>
+                  ))}
+                  {!orders.length && <li className="py-2 text-muted-foreground">No orders yet.</li>}
+                </ul>
+              </section>
+              <section className="rounded-2xl border bg-card p-4">
+                <h2 className="font-semibold">Low stock</h2>
+                <ul className="mt-2 divide-y text-sm">
+                  {products.filter((p) => p.stock <= 5).slice(0, 8).map((p) => (
+                    <li key={p.id} className="py-2 flex justify-between"><span className="line-clamp-1">{p.name}</span><span className={p.stock === 0 ? "text-destructive" : ""}>{p.stock} left</span></li>
+                  ))}
+                  {!products.some((p) => p.stock <= 5) && <li className="py-2 text-muted-foreground">All products well stocked.</li>}
+                </ul>
+              </section>
+            </div>
           </div>
         )}
 
         {tab === "orders" && (
-          <div className="mt-6 rounded-2xl border overflow-hidden bg-card">
+          <div className="mt-6 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <input value={orderQ} onChange={(e) => setOrderQ(e.target.value)} placeholder="Search order no, name or phone" aria-label="Search orders" className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background" />
+            <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)} aria-label="Filter by status" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              {["all", "pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="rounded-2xl border overflow-x-auto bg-card">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left">
                 <tr><th className="p-3">Order</th><th className="p-3">Customer</th><th className="p-3">Total</th><th className="p-3">Status</th></tr>
               </thead>
               <tbody className="divide-y">
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td className="p-3 font-mono text-xs">{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div></td>
+                {orders.filter((o) => (orderFilter === "all" || o.status === orderFilter) && `${o.order_number} ${o.customer_name} ${o.customer_phone}`.toLowerCase().includes(orderQ.toLowerCase())).map((o) => (
+                  <Fragment key={o.id}>
+                  <tr>
+                    <td className="p-3 font-mono text-xs">{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div>
+                      <button onClick={() => toggleOrder(o.id)} className="mt-1 font-sans text-brand underline">{openOrder === o.id ? "Hide details" : "Details"}</button>
+                    </td>
                     <td className="p-3">{o.customer_name}<div className="text-xs text-muted-foreground">{o.customer_phone}</div></td>
                     <td className="p-3 font-semibold">{bdt(o.total_bdt)}
                       {o.payment_method !== "cod" && (
@@ -259,6 +295,26 @@ function AdminPage() {
                       </select>
                     </td>
                   </tr>
+                  {openOrder === o.id && (
+                    <tr><td colSpan={4} className="p-3 bg-muted/50 text-xs">
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <div className="font-semibold">Delivery</div>
+                          <div>{o.address_line}, {o.city}{o.district ? `, ${o.district}` : ""}</div>
+                          <div>Zone: {o.delivery_zone}{o.guest_email ? ` · ${o.guest_email}` : ""}</div>
+                          {o.notes && <div>Note: {o.notes}</div>}
+                          <div className="mt-1">Subtotal {bdt(o.subtotal_bdt)} · Shipping {bdt(o.shipping_bdt)} · Discount {bdt(o.discount_bdt)}{o.coupon_code ? ` (${o.coupon_code})` : ""}</div>
+                        </div>
+                        <ul className="space-y-1">
+                          {(orderItems[o.id] ?? []).map((it: any) => (
+                            <li key={it.id} className="flex justify-between gap-2"><span>{it.product_name}{it.variant_label ? ` (${it.variant_label})` : ""} × {it.qty}</span><span>{bdt(it.unit_price_bdt * it.qty)}</span></li>
+                          ))}
+                          {!orderItems[o.id] && <li>Loading…</li>}
+                        </ul>
+                      </div>
+                    </td></tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -389,6 +445,9 @@ function AdminPage() {
                 <div className="flex gap-2">
                   <button className="rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm font-medium">Save</button>
                   <button type="button" onClick={() => setCatForm(null)} className="rounded-full border px-5 py-2 text-sm">Cancel</button>
+                  {catForm.id && (
+                    <button type="button" onClick={async () => { if (!confirm("Delete this category? Its products stay but become uncategorised.")) return; try { await deleteCategory({ data: { id: catForm.id } }); toast.success("Category deleted"); setCatForm(null); reload(); } catch (e: any) { toast.error(e.message); } }} className="ml-auto rounded-full border border-destructive text-destructive px-5 py-2 text-sm">Delete</button>
+                  )}
                 </div>
               </form>
             )}
@@ -541,6 +600,50 @@ function AdminPage() {
               </ul>
             </section>
           </div>
+        )}
+
+        {tab === "customers" && (
+          <div className="mt-6 space-y-3">
+            <input value={custQ} onChange={(e) => setCustQ(e.target.value)} placeholder="Search name, email or phone" aria-label="Search customers" className="w-full sm:w-80 rounded-xl border px-3 py-2 text-sm bg-background" />
+            <div className="rounded-2xl border overflow-x-auto bg-card">
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-left">
+                  <tr><th className="p-3">Customer</th><th className="p-3">Orders</th><th className="p-3">Spent</th><th className="p-3">Joined</th><th className="p-3">Role</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {customers.filter((c) => `${c.email} ${c.full_name ?? ""} ${c.phone ?? ""}`.toLowerCase().includes(custQ.toLowerCase())).map((c) => (
+                    <tr key={c.id}>
+                      <td className="p-3"><div className="font-medium">{c.full_name || "—"}</div><div className="text-xs text-muted-foreground">{c.email}{c.phone ? ` · ${c.phone}` : ""}</div></td>
+                      <td className="p-3">{c.order_count}</td>
+                      <td className="p-3">{bdt(c.spent_bdt)}</td>
+                      <td className="p-3 text-xs">{new Date(c.created_at).toLocaleDateString()}</td>
+                      <td className="p-3">
+                        <button onClick={() => toggleAdmin(c)} className={`rounded-full px-3 py-1 text-xs border ${c.is_admin ? "bg-brand text-brand-foreground border-brand" : ""}`}>{c.is_admin ? "Admin" : "Customer"}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!customers.length && <div className="p-8 text-center text-muted-foreground text-sm">No customers yet.</div>}
+            </div>
+            <p className="text-xs text-muted-foreground">Click a role to switch between Customer and Admin.</p>
+          </div>
+        )}
+
+        {tab === "reviews" && (
+          <ul className="mt-6 rounded-2xl border bg-card divide-y">
+            {reviews.map((r) => (
+              <li key={r.id} className="p-3 flex gap-3 text-sm">
+                <div className="min-w-0">
+                  <div className="font-medium">{"★".repeat(r.rating)}<span className="text-muted-foreground">{"★".repeat(5 - r.rating)}</span> · {r.author_name}</div>
+                  <div className="text-xs text-muted-foreground">{r.products?.name ?? "Product"} · {new Date(r.created_at).toLocaleDateString()}</div>
+                  {r.comment && <p className="mt-1">{r.comment}</p>}
+                </div>
+                <button onClick={() => removeReview(r.id)} aria-label="Delete review" className="ml-auto text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+              </li>
+            ))}
+            {!reviews.length && <li className="p-8 text-center text-muted-foreground text-sm">No reviews yet.</li>}
+          </ul>
         )}
       </div>
     </AppShell>
