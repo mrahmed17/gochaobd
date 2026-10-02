@@ -8,6 +8,7 @@ import { Loader2, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/pay/$number")({
   head: () => ({ meta: [{ title: "Complete payment — GochaoBD" }, { name: "robots", content: "noindex" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ k: typeof s.k === "string" ? s.k : "" }),
   component: PayPage,
 });
 
@@ -18,6 +19,7 @@ const WALLETS: Record<string, { name: string; number: string; color: string }> =
 
 function PayPage() {
   const { number } = Route.useParams();
+  const { k } = Route.useSearch();
   const nav = useNavigate();
   const [order, setOrder] = useState<any>(null);
   const [sender, setSender] = useState("");
@@ -25,10 +27,10 @@ function PayPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    getPaymentSession({ data: { orderNumber: number } })
+    getPaymentSession({ data: { orderNumber: number, paymentKey: k } })
       .then(setOrder)
       .catch(() => toast.error("Order not found"));
-  }, [number]);
+  }, [number, k]);
 
   const wallet = WALLETS[order?.payment_method] ?? WALLETS['bkash']!;
 
@@ -36,8 +38,8 @@ function PayPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      await confirmSandboxPayment({ data: { orderNumber: number, senderNumber: sender, trxId: trx } });
-      toast.success("Payment confirmed");
+      await confirmSandboxPayment({ data: { orderNumber: number, paymentKey: k, senderNumber: sender, trxId: trx } });
+      toast.success("Payment submitted — we\u2019ll confirm it shortly");
       nav({ to: "/order-success/$number", params: { number } });
     } catch (err: any) {
       toast.error(err.message ?? "Could not confirm payment");
@@ -47,6 +49,18 @@ function PayPage() {
   }
 
   if (!order) return <AppShell><div className="p-8 text-sm text-muted-foreground">Loading payment…</div></AppShell>;
+
+  if (order.payment_status === "verifying") {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-md px-4 py-10 text-center">
+          <h1 className="font-display text-2xl">Payment being verified</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Order {order.order_number} · we\u2019ll confirm once your payment is checked.</p>
+          <Link to="/track" className="mt-4 inline-block rounded-full bg-brand text-brand-foreground px-5 py-2.5 text-sm">Track order</Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   if (order.payment_status === "paid") {
     return (
@@ -76,7 +90,7 @@ function PayPage() {
               <p className="font-medium">Test mode</p>
               <p className="text-xs text-muted-foreground">
                 No real money moves yet. Send to <span className="font-mono">{wallet.number}</span> (Personal),
-                then enter any transaction ID below to mark the order paid.
+                then enter the transaction ID below. Our team will verify it and confirm your order.
               </p>
             </div>
 

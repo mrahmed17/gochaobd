@@ -47,6 +47,21 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const updatePaymentStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ id: z.string().uuid(), payment_status: z.enum(["paid", "failed", "awaiting"]) }).parse(data),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: Record<string, string> = { payment_status: data.payment_status };
+    if (data.payment_status === "paid") patch.status = "confirmed";
+    const { error } = await supabaseAdmin.from("orders").update(patch as any).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
 export const updateProductStock = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ id: z.string().uuid(), stock: z.number().int().min(0).max(100000) }).parse(data))

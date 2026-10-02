@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  verifyAdmin, getAdminData, updateOrderStatus, updateProductStock,
+  verifyAdmin, getAdminData, updateOrderStatus, updatePaymentStatus, updateProductStock,
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
   saveStore, deleteStore,
@@ -86,6 +86,11 @@ function AdminPage() {
       await updateOrderStatus({ data: { id, status: status as any } });
       toast.success("Updated"); reload();
     } catch (e: any) { toast.error(e.message ?? "Update failed"); }
+  }
+
+  async function setPayment(id: string, payment_status: "paid" | "failed") {
+    try { await updatePaymentStatus({ data: { id, payment_status } }); toast.success("Payment updated"); reload(); }
+    catch (e: any) { toast.error(e.message ?? "Update failed"); }
   }
 
   async function updateStock(id: string, stock: number) {
@@ -235,7 +240,19 @@ function AdminPage() {
                   <tr key={o.id}>
                     <td className="p-3 font-mono text-xs">{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div></td>
                     <td className="p-3">{o.customer_name}<div className="text-xs text-muted-foreground">{o.customer_phone}</div></td>
-                    <td className="p-3 font-semibold">{bdt(o.total_bdt)}</td>
+                    <td className="p-3 font-semibold">{bdt(o.total_bdt)}
+                      {o.payment_method !== "cod" && (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {o.payment_method} · {o.payment_status}{o.payment_ref ? ` · ${o.payment_ref}` : ""}
+                          {o.payment_status === "verifying" && (
+                            <span className="ml-1 inline-flex gap-1">
+                              <button onClick={() => setPayment(o.id, "paid")} className="text-brand underline">Mark paid</button>
+                              <button onClick={() => setPayment(o.id, "failed")} className="text-destructive underline">Reject</button>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-3">
                       <select value={o.status} onChange={(e) => updateStatus(o.id, e.target.value)} aria-label="Order status" className="rounded-full border px-2 py-1 text-xs bg-background">
                         {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}

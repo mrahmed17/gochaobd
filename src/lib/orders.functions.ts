@@ -159,7 +159,7 @@ export const placeOrder = createServerFn({ method: "POST" })
 
     const recipient = userEmail ?? (data.customer.email || data.customer.phone);
     if (recipient) {
-      await supabase.from("notifications").insert({
+      await supabaseAdmin.from("notifications").insert({
         order_id: order.id,
         channel: userEmail || data.customer.email ? "email" : "sms",
         recipient,
@@ -181,6 +181,8 @@ export const placeOrder = createServerFn({ method: "POST" })
 
     return {
       orderNumber: order.order_number,
+      // Unguessable per-order key; required to open the payment page.
+      paymentKey: order.id,
       total, subtotal, shipping, discount,
       requiresPayment: online,
       provider: online ? data.customer.payment : null,
@@ -191,23 +193,27 @@ export const placeOrder = createServerFn({ method: "POST" })
    Test-mode only: no real money moves. Replace these two handlers with the
    provider's checkout + verify calls once live merchant credentials exist. */
 
+const payInput = z.object({ orderNumber: z.string().trim().min(4).max(40), paymentKey: z.string().uuid() });
+
 export const getPaymentSession = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ orderNumber: z.string().trim().min(4).max(40) }).parse(d))
+  .inputValidator((d) => payInput.parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: o } = await supabaseAdmin
       .from("orders")
-      .select("order_number, total_bdt, payment_method, payment_status, payment_ref, customer_name")
+      .select("order_number, total_bdt, payment_method, payment_status, payment_ref")
+      .eq("id", data.paymentKey)
       .eq("order_number", data.orderNumber.toUpperCase())
       .maybeSingle();
     if (!o) throw new Error("Order not found");
     return o;
   });
 
+/** Customer submits their transaction ID. The order is NOT marked paid —
+ *  it waits as "verifying" until an admin confirms the payment. */
 export const confirmSandboxPayment = createServerFn({ method: "POST" })
   .inputValidator((d) =>
-    z.object({
-      orderNumber: z.string().trim().min(4).max(40),
+    payInput.extend({
       senderNumber: z.string().trim().min(6).max(20),
       trxId: z.string().trim().min(4).max(40),
     }).parse(d),
@@ -217,26 +223,19 @@ export const confirmSandboxPayment = createServerFn({ method: "POST" })
     const number = data.orderNumber.toUpperCase();
     const { data: o } = await supabaseAdmin
       .from("orders")
-      .select("id, payment_status, payment_method, total_bdt")
+      .select("id, payment_status, payment_method")
+      .eq("id", data.paymentKey)
       .eq("order_number", number)
       .maybeSingle();
     if (!o) throw new Error("Order not found");
     if (o.payment_status === "paid") return { ok: true as const, alreadyPaid: true };
+    if (o.payment_method === "cod") throw new Error("This order is cash on delivery");
 
-    const ref = `SBX-${data.trxId.toUpperCase()}`;
+    const ref = `${data.trxId.toUpperCase()} (from ${data.senderNumber})`;
     const { error } = await supabaseAdmin
       .from("orders")
-      .update({ payment_status: "paid", payment_ref: ref, status: "confirmed" })
+      .update({ payment_status: "verifying", payment_ref: ref })
       .eq("id", o.id);
-    if (error) throw new Error(error.message);
-
-    await supabaseAdmin.from("notifications").insert({
-      order_id: o.id,
-      channel: "sms",
-      recipient: data.senderNumber,
-      subject: `Payment received for ${number}`,
-      body: `Sandbox ${o.payment_method.toUpperCase()} payment of ৳${o.total_bdt} received. Reference ${ref}.`,
-      status: "sandbox",
-    });
-    return { ok: true as const, alreadyPaid: false, reference: ref };
+    if (error) throw new Error("Could not submit payment");
+    return { ok: true as const, alreadyPaid: false };
   });
