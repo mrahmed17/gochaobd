@@ -7,18 +7,19 @@ import {
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
   saveStore, deleteStore, getCustomers, setAdminRole, getReviews, deleteReview,
-  deleteCategory, getOrderItems,
+  deleteCategory, getOrderItems, uploadImage, saveOrderDelivery, getSalesReport, askAssistant,
 } from "@/lib/admin.functions";
 import { bdt } from "@/lib/format";
+import { resolveImage } from "@/lib/queries";
 import { toast } from "sonner";
-import { Package, ShoppingBag, Users, TrendingUp, Plus, Trash2, Bell } from "lucide-react";
+import { Package, ShoppingBag, Users, TrendingUp, Plus, Trash2, Bell, Upload, Download, Sparkles, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — GochaoBD" }, { name: "robots", content: "noindex" }] }),
   component: AdminPage,
 });
 
-type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "stores" | "customers" | "reviews" | "marketing";
+type Tab = "dash" | "orders" | "reports" | "assistant" | "products" | "categories" | "coupons" | "stores" | "customers" | "reviews" | "marketing";
 
 const emptyProduct = {
   slug: "", name: "", description: "", specs: "", price_bdt: 0, compare_price_bdt: null,
@@ -54,6 +55,10 @@ function AdminPage() {
   const [custQ, setCustQ] = useState("");
   const [orderQ, setOrderQ] = useState("");
   const [orderFilter, setOrderFilter] = useState("all");
+  const [payFilter, setPayFilter] = useState("all");
+  const [zoneFilter, setZoneFilter] = useState("all");
+  const [orderFrom, setOrderFrom] = useState("");
+  const [orderTo, setOrderTo] = useState("");
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [orderItems, setOrderItems] = useState<Record<string, any[]>>({});
 
@@ -248,12 +253,15 @@ function AdminPage() {
           <Link to="/" className="text-sm text-brand">← Back to store</Link>
         </div>
         <div className="mt-4 flex gap-2 border-b -mx-4 px-4 overflow-x-auto">
-          {(["dash", "orders", "products", "categories", "coupons", "stores", "customers", "reviews", "marketing"] as const).map((t) => (
+          {(["dash", "orders", "reports", "assistant", "products", "categories", "coupons", "stores", "customers", "reviews", "marketing"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap px-4 py-2 text-sm capitalize border-b-2 ${tab === t ? "border-brand text-brand" : "border-transparent text-muted-foreground"}`}>
-              {t === "dash" ? "Dashboard" : t}
+              {t === "dash" ? "Dashboard" : t === "assistant" ? "AI assistant" : t}
             </button>
           ))}
         </div>
+
+        {tab === "reports" && <ReportsPanel />}
+        {tab === "assistant" && <AssistantPanel />}
 
         {tab === "dash" && (
           <div className="mt-6 space-y-4">
@@ -293,10 +301,24 @@ function AdminPage() {
         {tab === "orders" && (
           <div className="mt-6 space-y-3">
           <div className="flex flex-wrap gap-2">
-            <input value={orderQ} onChange={(e) => setOrderQ(e.target.value)} placeholder="Search order no, name or phone" aria-label="Search orders" className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background" />
+            <input value={orderQ} onChange={(e) => setOrderQ(e.target.value)} placeholder="Search order no, name, phone or tracking" aria-label="Search orders" className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background" />
             <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)} aria-label="Filter by status" className="rounded-xl border px-3 py-2 text-sm bg-background">
               {["all", "pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
+            <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} aria-label="Filter by payment" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              {["all", "cod", "awaiting", "verifying", "paid", "failed"].map((s) => <option key={s} value={s}>{s === "all" ? "all payments" : s}</option>)}
+            </select>
+            <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} aria-label="Filter by zone" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              <option value="all">all zones</option>
+              {[...new Set(orders.map((o) => o.delivery_zone))].map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <input type="date" value={orderFrom} onChange={(e) => setOrderFrom(e.target.value)} aria-label="From date" className="rounded-xl border px-3 py-2 text-sm bg-background" />
+            <input type="date" value={orderTo} onChange={(e) => setOrderTo(e.target.value)} aria-label="To date" className="rounded-xl border px-3 py-2 text-sm bg-background" />
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => (
+              <button key={s} onClick={() => setOrderFilter(orderFilter === s ? "all" : s)} className={`rounded-full border px-3 py-1 capitalize ${orderFilter === s ? "bg-brand text-brand-foreground" : "bg-card"}`}>{s} · {orders.filter((o) => o.status === s).length}</button>
+            ))}
           </div>
           <div className="rounded-2xl border overflow-x-auto bg-card">
             <table className="w-full text-sm">
@@ -304,7 +326,15 @@ function AdminPage() {
                 <tr><th className="p-3">Order</th><th className="p-3">Customer</th><th className="p-3">Total</th><th className="p-3">Status</th></tr>
               </thead>
               <tbody className="divide-y">
-                {orders.filter((o) => (orderFilter === "all" || o.status === orderFilter) && `${o.order_number} ${o.customer_name} ${o.customer_phone}`.toLowerCase().includes(orderQ.toLowerCase())).map((o) => (
+                {orders.filter((o) => {
+                  if (orderFilter !== "all" && o.status !== orderFilter) return false;
+                  if (payFilter === "cod" ? o.payment_method !== "cod" : payFilter !== "all" && (o.payment_method === "cod" || o.payment_status !== payFilter)) return false;
+                  if (zoneFilter !== "all" && o.delivery_zone !== zoneFilter) return false;
+                  const d = o.created_at.slice(0, 10);
+                  if (orderFrom && d < orderFrom) return false;
+                  if (orderTo && d > orderTo) return false;
+                  return `${o.order_number} ${o.customer_name} ${o.customer_phone} ${o.tracking_number ?? ""}`.toLowerCase().includes(orderQ.toLowerCase());
+                }).map((o) => (
                   <Fragment key={o.id}>
                   <tr>
                     <td className="p-3 font-mono text-xs">{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div>
@@ -332,7 +362,9 @@ function AdminPage() {
                   </tr>
                   {openOrder === o.id && (
                     <tr><td colSpan={4} className="p-3 bg-muted/50 text-xs">
-                      <div className="grid sm:grid-cols-2 gap-3">
+                      <DeliveryProgress order={o} />
+                      <DeliveryForm order={o} onSaved={reload} />
+                      <div className="grid sm:grid-cols-2 gap-3 mt-3">
                         <div>
                           <div className="font-semibold">Delivery</div>
                           <div>{o.address_line}, {o.city}{o.district ? `, ${o.district}` : ""}</div>
@@ -404,7 +436,7 @@ function AdminPage() {
                       {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </label>
-                  <F label="Image paths (comma separated)" value={Array.isArray(editing.images) ? editing.images.join(", ") : editing.images ?? ""} onChange={(v) => setEditing({ ...editing, images: v })} className="sm:col-span-2" />
+                  <GalleryField value={Array.isArray(editing.images) ? editing.images : String(editing.images || "").split(",").map((s: string) => s.trim()).filter(Boolean)} onChange={(v) => setEditing({ ...editing, images: v })} />
                   <F label="Video URL" value={editing.video_url ?? ""} onChange={(v) => setEditing({ ...editing, video_url: v })} className="sm:col-span-2" />
                   <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
                     <textarea value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={3} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background" />
@@ -468,7 +500,7 @@ function AdminPage() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   <F label="Name" value={catForm.name} onChange={(v) => setCatForm({ ...catForm, name: v })} required />
                   <F label="Slug" value={catForm.slug} onChange={(v) => setCatForm({ ...catForm, slug: v })} required />
-                  <F label="Image path" value={catForm.image_url ?? ""} onChange={(v) => setCatForm({ ...catForm, image_url: v })} />
+                  <ImageField label="Category photo" folder="categories" value={catForm.image_url ?? ""} onChange={(v) => setCatForm({ ...catForm, image_url: v })} />
                   <F label="Sort order" type="number" value={catForm.sort_order ?? 0} onChange={(v) => setCatForm({ ...catForm, sort_order: v })} />
                   <label className="block">
                     <span className="text-xs text-muted-foreground">Store / brand</span>
@@ -560,7 +592,7 @@ function AdminPage() {
                   <F label="Tagline" value={storeForm.tagline ?? ""} onChange={(v) => setStoreForm({ ...storeForm, tagline: v })} className="sm:col-span-2" />
                   <F label="Primary colour" value={storeForm.theme_color} onChange={(v) => setStoreForm({ ...storeForm, theme_color: v })} />
                   <F label="Accent colour" value={storeForm.accent_color} onChange={(v) => setStoreForm({ ...storeForm, accent_color: v })} />
-                  <F label="Logo URL" value={storeForm.logo_url ?? ""} onChange={(v) => setStoreForm({ ...storeForm, logo_url: v })} />
+                  <ImageField label="Logo" folder="stores" value={storeForm.logo_url ?? ""} onChange={(v) => setStoreForm({ ...storeForm, logo_url: v })} />
                   <F label="Sort order" type="number" value={storeForm.sort_order ?? 0} onChange={(v) => setStoreForm({ ...storeForm, sort_order: v })} />
                   <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
                     <textarea value={storeForm.description ?? ""} onChange={(e) => setStoreForm({ ...storeForm, description: e.target.value })} rows={2} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background" />
