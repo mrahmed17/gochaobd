@@ -289,9 +289,12 @@ export type Database = {
           address_line: string
           city: string
           coupon_code: string | null
+          courier: string | null
           created_at: string
           customer_name: string
           customer_phone: string
+          delivered_at: string | null
+          delivery_note: string | null
           delivery_zone: string
           discount_bdt: number
           district: string | null
@@ -303,11 +306,13 @@ export type Database = {
           payment_provider: string | null
           payment_ref: string | null
           payment_status: string
+          shipped_at: string | null
           shipping_bdt: number
           status: string
           store_id: string | null
           subtotal_bdt: number
           total_bdt: number
+          tracking_number: string | null
           updated_at: string
           user_id: string | null
         }
@@ -315,9 +320,12 @@ export type Database = {
           address_line: string
           city: string
           coupon_code?: string | null
+          courier?: string | null
           created_at?: string
           customer_name: string
           customer_phone: string
+          delivered_at?: string | null
+          delivery_note?: string | null
           delivery_zone?: string
           discount_bdt?: number
           district?: string | null
@@ -329,11 +337,13 @@ export type Database = {
           payment_provider?: string | null
           payment_ref?: string | null
           payment_status?: string
+          shipped_at?: string | null
           shipping_bdt?: number
           status?: string
           store_id?: string | null
           subtotal_bdt: number
           total_bdt: number
+          tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -341,9 +351,12 @@ export type Database = {
           address_line?: string
           city?: string
           coupon_code?: string | null
+          courier?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string
+          delivered_at?: string | null
+          delivery_note?: string | null
           delivery_zone?: string
           discount_bdt?: number
           district?: string | null
@@ -355,11 +368,13 @@ export type Database = {
           payment_provider?: string | null
           payment_ref?: string | null
           payment_status?: string
+          shipped_at?: string | null
           shipping_bdt?: number
           status?: string
           store_id?: string | null
           subtotal_bdt?: number
           total_bdt?: number
+          tracking_number?: string | null
           updated_at?: string
           user_id?: string | null
         }

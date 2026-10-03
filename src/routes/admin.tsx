@@ -7,18 +7,19 @@ import {
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
   saveStore, deleteStore, getCustomers, setAdminRole, getReviews, deleteReview,
-  deleteCategory, getOrderItems,
+  deleteCategory, getOrderItems, uploadImage, saveOrderDelivery, getSalesReport, askAssistant,
 } from "@/lib/admin.functions";
 import { bdt } from "@/lib/format";
+import { resolveImage } from "@/lib/queries";
 import { toast } from "sonner";
-import { Package, ShoppingBag, Users, TrendingUp, Plus, Trash2, Bell } from "lucide-react";
+import { Package, ShoppingBag, Users, TrendingUp, Plus, Trash2, Bell, Upload, Download, Sparkles, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — GochaoBD" }, { name: "robots", content: "noindex" }] }),
   component: AdminPage,
 });
 
-type Tab = "dash" | "orders" | "products" | "categories" | "coupons" | "stores" | "customers" | "reviews" | "marketing";
+type Tab = "dash" | "orders" | "reports" | "assistant" | "products" | "categories" | "coupons" | "stores" | "customers" | "reviews" | "marketing";
 
 const emptyProduct = {
   slug: "", name: "", description: "", specs: "", price_bdt: 0, compare_price_bdt: null,
@@ -54,6 +55,10 @@ function AdminPage() {
   const [custQ, setCustQ] = useState("");
   const [orderQ, setOrderQ] = useState("");
   const [orderFilter, setOrderFilter] = useState("all");
+  const [payFilter, setPayFilter] = useState("all");
+  const [zoneFilter, setZoneFilter] = useState("all");
+  const [orderFrom, setOrderFrom] = useState("");
+  const [orderTo, setOrderTo] = useState("");
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const [orderItems, setOrderItems] = useState<Record<string, any[]>>({});
 
@@ -248,12 +253,15 @@ function AdminPage() {
           <Link to="/" className="text-sm text-brand">← Back to store</Link>
         </div>
         <div className="mt-4 flex gap-2 border-b -mx-4 px-4 overflow-x-auto">
-          {(["dash", "orders", "products", "categories", "coupons", "stores", "customers", "reviews", "marketing"] as const).map((t) => (
+          {(["dash", "orders", "reports", "assistant", "products", "categories", "coupons", "stores", "customers", "reviews", "marketing"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`whitespace-nowrap px-4 py-2 text-sm capitalize border-b-2 ${tab === t ? "border-brand text-brand" : "border-transparent text-muted-foreground"}`}>
-              {t === "dash" ? "Dashboard" : t}
+              {t === "dash" ? "Dashboard" : t === "assistant" ? "AI assistant" : t}
             </button>
           ))}
         </div>
+
+        {tab === "reports" && <ReportsPanel />}
+        {tab === "assistant" && <AssistantPanel />}
 
         {tab === "dash" && (
           <div className="mt-6 space-y-4">
@@ -293,10 +301,24 @@ function AdminPage() {
         {tab === "orders" && (
           <div className="mt-6 space-y-3">
           <div className="flex flex-wrap gap-2">
-            <input value={orderQ} onChange={(e) => setOrderQ(e.target.value)} placeholder="Search order no, name or phone" aria-label="Search orders" className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background" />
+            <input value={orderQ} onChange={(e) => setOrderQ(e.target.value)} placeholder="Search order no, name, phone or tracking" aria-label="Search orders" className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background" />
             <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)} aria-label="Filter by status" className="rounded-xl border px-3 py-2 text-sm bg-background">
               {["all", "pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
+            <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} aria-label="Filter by payment" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              {["all", "cod", "awaiting", "verifying", "paid", "failed"].map((s) => <option key={s} value={s}>{s === "all" ? "all payments" : s}</option>)}
+            </select>
+            <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} aria-label="Filter by zone" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              <option value="all">all zones</option>
+              {[...new Set(orders.map((o) => o.delivery_zone))].map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <input type="date" value={orderFrom} onChange={(e) => setOrderFrom(e.target.value)} aria-label="From date" className="rounded-xl border px-3 py-2 text-sm bg-background" />
+            <input type="date" value={orderTo} onChange={(e) => setOrderTo(e.target.value)} aria-label="To date" className="rounded-xl border px-3 py-2 text-sm bg-background" />
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => (
+              <button key={s} onClick={() => setOrderFilter(orderFilter === s ? "all" : s)} className={`rounded-full border px-3 py-1 capitalize ${orderFilter === s ? "bg-brand text-brand-foreground" : "bg-card"}`}>{s} · {orders.filter((o) => o.status === s).length}</button>
+            ))}
           </div>
           <div className="rounded-2xl border overflow-x-auto bg-card">
             <table className="w-full text-sm">
@@ -304,7 +326,15 @@ function AdminPage() {
                 <tr><th className="p-3">Order</th><th className="p-3">Customer</th><th className="p-3">Total</th><th className="p-3">Status</th></tr>
               </thead>
               <tbody className="divide-y">
-                {orders.filter((o) => (orderFilter === "all" || o.status === orderFilter) && `${o.order_number} ${o.customer_name} ${o.customer_phone}`.toLowerCase().includes(orderQ.toLowerCase())).map((o) => (
+                {orders.filter((o) => {
+                  if (orderFilter !== "all" && o.status !== orderFilter) return false;
+                  if (payFilter === "cod" ? o.payment_method !== "cod" : payFilter !== "all" && (o.payment_method === "cod" || o.payment_status !== payFilter)) return false;
+                  if (zoneFilter !== "all" && o.delivery_zone !== zoneFilter) return false;
+                  const d = o.created_at.slice(0, 10);
+                  if (orderFrom && d < orderFrom) return false;
+                  if (orderTo && d > orderTo) return false;
+                  return `${o.order_number} ${o.customer_name} ${o.customer_phone} ${o.tracking_number ?? ""}`.toLowerCase().includes(orderQ.toLowerCase());
+                }).map((o) => (
                   <Fragment key={o.id}>
                   <tr>
                     <td className="p-3 font-mono text-xs">{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div>
@@ -332,7 +362,9 @@ function AdminPage() {
                   </tr>
                   {openOrder === o.id && (
                     <tr><td colSpan={4} className="p-3 bg-muted/50 text-xs">
-                      <div className="grid sm:grid-cols-2 gap-3">
+                      <DeliveryProgress order={o} />
+                      <DeliveryForm order={o} onSaved={reload} />
+                      <div className="grid sm:grid-cols-2 gap-3 mt-3">
                         <div>
                           <div className="font-semibold">Delivery</div>
                           <div>{o.address_line}, {o.city}{o.district ? `, ${o.district}` : ""}</div>
@@ -404,7 +436,7 @@ function AdminPage() {
                       {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </label>
-                  <F label="Image paths (comma separated)" value={Array.isArray(editing.images) ? editing.images.join(", ") : editing.images ?? ""} onChange={(v) => setEditing({ ...editing, images: v })} className="sm:col-span-2" />
+                  <GalleryField value={Array.isArray(editing.images) ? editing.images : String(editing.images || "").split(",").map((s: string) => s.trim()).filter(Boolean)} onChange={(v) => setEditing({ ...editing, images: v })} />
                   <F label="Video URL" value={editing.video_url ?? ""} onChange={(v) => setEditing({ ...editing, video_url: v })} className="sm:col-span-2" />
                   <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
                     <textarea value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={3} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background" />
@@ -468,7 +500,7 @@ function AdminPage() {
                 <div className="grid sm:grid-cols-2 gap-3">
                   <F label="Name" value={catForm.name} onChange={(v) => setCatForm({ ...catForm, name: v })} required />
                   <F label="Slug" value={catForm.slug} onChange={(v) => setCatForm({ ...catForm, slug: v })} required />
-                  <F label="Image path" value={catForm.image_url ?? ""} onChange={(v) => setCatForm({ ...catForm, image_url: v })} />
+                  <ImageField label="Category photo" folder="categories" value={catForm.image_url ?? ""} onChange={(v) => setCatForm({ ...catForm, image_url: v })} />
                   <F label="Sort order" type="number" value={catForm.sort_order ?? 0} onChange={(v) => setCatForm({ ...catForm, sort_order: v })} />
                   <label className="block">
                     <span className="text-xs text-muted-foreground">Store / brand</span>
@@ -560,7 +592,7 @@ function AdminPage() {
                   <F label="Tagline" value={storeForm.tagline ?? ""} onChange={(v) => setStoreForm({ ...storeForm, tagline: v })} className="sm:col-span-2" />
                   <F label="Primary colour" value={storeForm.theme_color} onChange={(v) => setStoreForm({ ...storeForm, theme_color: v })} />
                   <F label="Accent colour" value={storeForm.accent_color} onChange={(v) => setStoreForm({ ...storeForm, accent_color: v })} />
-                  <F label="Logo URL" value={storeForm.logo_url ?? ""} onChange={(v) => setStoreForm({ ...storeForm, logo_url: v })} />
+                  <ImageField label="Logo" folder="stores" value={storeForm.logo_url ?? ""} onChange={(v) => setStoreForm({ ...storeForm, logo_url: v })} />
                   <F label="Sort order" type="number" value={storeForm.sort_order ?? 0} onChange={(v) => setStoreForm({ ...storeForm, sort_order: v })} />
                   <label className="block sm:col-span-2"><span className="text-xs text-muted-foreground">Description</span>
                     <textarea value={storeForm.description ?? ""} onChange={(e) => setStoreForm({ ...storeForm, description: e.target.value })} rows={2} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm bg-background" />
@@ -701,6 +733,211 @@ function Stat({ icon: Icon, label, value }: { icon: any; label: string; value: s
       <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand-soft text-brand"><Icon className="h-4 w-4" /></div>
       <div className="mt-2 text-xs text-muted-foreground">{label}</div>
       <div className="text-xl font-display">{value}</div>
+    </div>
+  );
+}
+
+/* ---------------- Photo upload ---------------- */
+
+async function fileToUpload(file: File, folder: "products" | "categories" | "stores") {
+  if (!file.type.startsWith("image/")) throw new Error("Please choose an image file");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  const { url } = await uploadImage({ data: { folder, fileName: file.name, contentType: file.type, base64: btoa(bin) } });
+  return url;
+}
+
+function ImageField({ label, folder, value, onChange }: { label: string; folder: "categories" | "stores"; value: string; onChange: (v: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="mt-1 flex items-center gap-3">
+        {value ? <img src={resolveImage(value)} alt="" className="h-14 w-14 rounded-xl object-cover border" /> : <div className="h-14 w-14 rounded-xl border bg-muted" />}
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs">
+          <Upload className="h-3.5 w-3.5" />{busy ? "Uploading…" : value ? "Change photo" : "Upload photo"}
+          <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={async (e) => {
+            const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+            setBusy(true);
+            try { onChange(await fileToUpload(f, folder)); toast.success("Photo uploaded"); } catch (err: any) { toast.error(err.message ?? "Upload failed"); } finally { setBusy(false); }
+          }} />
+        </label>
+        {value && <button type="button" onClick={() => onChange("")} className="text-xs text-destructive">Remove</button>}
+      </div>
+    </div>
+  );
+}
+
+function GalleryField({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="sm:col-span-2 text-sm">
+      <span className="text-muted-foreground">Product photos (first one is the main photo, up to 8)</span>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {value.map((src, i) => (
+          <div key={src + i} className="relative">
+            <img src={resolveImage(src)} alt="" className="h-20 w-20 rounded-xl object-cover border" />
+            <button type="button" aria-label="Remove photo" onClick={() => onChange(value.filter((_, j) => j !== i))} className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"><X className="h-3 w-3" /></button>
+            {i > 0 && <button type="button" onClick={() => onChange([src, ...value.filter((_, j) => j !== i)])} className="absolute bottom-0 inset-x-0 rounded-b-xl bg-background/80 text-[10px]">Make main</button>}
+          </div>
+        ))}
+        {value.length < 8 && (
+          <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-xs text-muted-foreground">
+            <Upload className="h-4 w-4" />{busy ? "Uploading…" : "Add photos"}
+            <input type="file" accept="image/*" multiple className="hidden" disabled={busy} onChange={async (e) => {
+              const files = Array.from(e.target.files ?? []).slice(0, 8 - value.length); e.target.value = "";
+              if (!files.length) return;
+              setBusy(true);
+              const urls: string[] = [];
+              for (const f of files) { try { urls.push(await fileToUpload(f, "products")); } catch (err: any) { toast.error(`${f.name}: ${err.message}`); } }
+              if (urls.length) { onChange([...value, ...urls]); toast.success(`${urls.length} photo(s) uploaded`); }
+              setBusy(false);
+            }} />
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Delivery ---------------- */
+
+const STEPS = ["pending", "confirmed", "shipped", "delivered"];
+
+function DeliveryProgress({ order }: { order: any }) {
+  if (order.status === "cancelled") return <div className="mb-2 rounded-lg bg-destructive/10 p-2 text-destructive font-medium">Order cancelled</div>;
+  const idx = STEPS.indexOf(order.status);
+  return (
+    <div className="mb-3">
+      <div className="flex items-center gap-1">
+        {STEPS.map((s, i) => (
+          <div key={s} className="flex-1">
+            <div className={`h-1.5 rounded-full ${i <= idx ? "bg-brand" : "bg-border"}`} />
+            <div className={`mt-1 capitalize ${i <= idx ? "text-foreground font-medium" : "text-muted-foreground"}`}>{s}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 text-muted-foreground">
+        Placed {new Date(order.created_at).toLocaleString()}
+        {order.shipped_at && ` · Shipped ${new Date(order.shipped_at).toLocaleString()}`}
+        {order.delivered_at && ` · Delivered ${new Date(order.delivered_at).toLocaleString()}`}
+      </div>
+    </div>
+  );
+}
+
+function DeliveryForm({ order, onSaved }: { order: any; onSaved: () => void }) {
+  const [f, setF] = useState({ courier: order.courier ?? "", tracking_number: order.tracking_number ?? "", delivery_note: order.delivery_note ?? "" });
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="grid gap-2 sm:grid-cols-4 items-end">
+      <label>Courier
+        <select value={f.courier} onChange={(e) => setF({ ...f, courier: e.target.value })} className="mt-1 w-full rounded-lg border px-2 py-1.5 bg-background">
+          {["", "Pathao", "Steadfast", "RedX", "Sundarban", "eCourier", "Own delivery"].map((c) => <option key={c} value={c}>{c || "Select…"}</option>)}
+        </select>
+      </label>
+      <label>Tracking number<input value={f.tracking_number} onChange={(e) => setF({ ...f, tracking_number: e.target.value })} className="mt-1 w-full rounded-lg border px-2 py-1.5 bg-background" /></label>
+      <label>Delivery note<input value={f.delivery_note} onChange={(e) => setF({ ...f, delivery_note: e.target.value })} className="mt-1 w-full rounded-lg border px-2 py-1.5 bg-background" /></label>
+      <button disabled={busy} onClick={async () => {
+        setBusy(true);
+        try { await saveOrderDelivery({ data: { id: order.id, courier: f.courier || null, tracking_number: f.tracking_number || null, delivery_note: f.delivery_note || null } }); toast.success("Delivery info saved"); onSaved(); }
+        catch (e: any) { toast.error(e.message ?? "Save failed"); } finally { setBusy(false); }
+      }} className="rounded-full bg-brand text-brand-foreground px-4 py-2 font-medium">{busy ? "Saving…" : "Save delivery info"}</button>
+    </div>
+  );
+}
+
+/* ---------------- Reports ---------------- */
+
+function downloadCsv(name: string, rows: (string | number)[][]) {
+  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+}
+
+function ReportsPanel() {
+  const today = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState(new Date(Date.now() - 29 * 86400_000).toISOString().slice(0, 10));
+  const [to, setTo] = useState(today);
+  const [rep, setRep] = useState<{ days: any[]; products: any[] } | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function run() {
+    setBusy(true);
+    try { setRep(await getSalesReport({ data: { from, to } })); } catch (e: any) { toast.error(e.message ?? "Report failed"); } finally { setBusy(false); }
+  }
+  useEffect(() => { run(); }, []);
+  const total = rep?.days.reduce((s, d) => s + d.revenue, 0) ?? 0;
+  const count = rep?.days.reduce((s, d) => s + d.orders, 0) ?? 0;
+  const max = Math.max(1, ...(rep?.days.map((d) => d.revenue) ?? [1]));
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="flex flex-wrap items-end gap-2 text-sm">
+        <label>From<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="ml-2 rounded-xl border px-3 py-2 bg-background" /></label>
+        <label>To<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="ml-2 rounded-xl border px-3 py-2 bg-background" /></label>
+        <button onClick={run} disabled={busy} className="rounded-full bg-brand text-brand-foreground px-4 py-2 font-medium">{busy ? "Loading…" : "Show report"}</button>
+      </div>
+      {rep && (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <Stat icon={TrendingUp} label="Sales" value={bdt(total)} />
+            <Stat icon={ShoppingBag} label="Orders" value={count} />
+            <Stat icon={Package} label="Avg. order" value={bdt(count ? Math.round(total / count) : 0)} />
+          </div>
+          <section className="rounded-2xl border bg-card p-4">
+            <div className="flex items-center justify-between"><h2 className="font-semibold">Sales by date</h2>
+              <button onClick={() => downloadCsv(`sales-by-date_${from}_${to}.csv`, [["Date", "Orders", "Revenue (BDT)"], ...rep.days.map((d) => [d.date, d.orders, d.revenue])])} className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs"><Download className="h-3.5 w-3.5" />CSV</button></div>
+            <div className="mt-3 space-y-1 text-xs">
+              {rep.days.map((d) => (
+                <div key={d.date} className="flex items-center gap-2"><span className="w-20 font-mono">{d.date.slice(5)}</span><div className="h-3 rounded bg-brand" style={{ width: `${(d.revenue / max) * 70}%` }} /><span>{bdt(d.revenue)} · {d.orders}</span></div>
+              ))}
+              {!rep.days.length && <div className="text-muted-foreground">No sales in this period.</div>}
+            </div>
+          </section>
+          <section className="rounded-2xl border bg-card p-4">
+            <div className="flex items-center justify-between"><h2 className="font-semibold">Sales by product</h2>
+              <button onClick={() => downloadCsv(`sales-by-product_${from}_${to}.csv`, [["Product", "Units sold", "Revenue (BDT)"], ...rep.products.map((p) => [p.product, p.qty, p.revenue])])} className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs"><Download className="h-3.5 w-3.5" />CSV</button></div>
+            <table className="mt-2 w-full text-sm"><thead className="text-left text-muted-foreground"><tr><th className="py-1">Product</th><th>Units</th><th>Revenue</th></tr></thead>
+              <tbody className="divide-y">{rep.products.map((p) => <tr key={p.product}><td className="py-1.5">{p.product}</td><td>{p.qty}</td><td>{bdt(p.revenue)}</td></tr>)}</tbody></table>
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- AI assistant ---------------- */
+
+function AssistantPanel() {
+  const [q, setQ] = useState("");
+  const [chat, setChat] = useState<{ q: string; a: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const examples = ["এই মাসে সবচেয়ে বেশি বিক্রি হওয়া ৫টি পণ্য কোনগুলো?", "Which products should I restock soon?", "গত ৭ দিনের বিক্রি আগের সপ্তাহের তুলনায় কেমন?", "How many orders are still pending or awaiting payment?"];
+  async function ask(question: string) {
+    if (!question.trim() || busy) return;
+    setBusy(true); setQ("");
+    try { const r = await askAssistant({ data: { question } }); setChat((c) => [...c, { q: question, a: r.answer }]); }
+    catch (e: any) { toast.error(e.message ?? "AI request failed"); setQ(question); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className="mt-6 space-y-4">
+      <div className="rounded-2xl border bg-card p-4">
+        <h2 className="flex items-center gap-2 font-semibold"><Sparkles className="h-4 w-4 text-brand" />Ask about sales, orders and inventory</h2>
+        <p className="text-sm text-muted-foreground">Answers use your last 90 days of orders and current stock.</p>
+        <div className="mt-3 flex flex-wrap gap-2">{examples.map((e) => <button key={e} onClick={() => ask(e)} disabled={busy} className="rounded-full border px-3 py-1 text-xs">{e}</button>)}</div>
+        <form onSubmit={(e) => { e.preventDefault(); ask(q); }} className="mt-3 flex gap-2">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type your question…" aria-label="Question" className="flex-1 rounded-xl border px-3 py-2 text-sm bg-background" />
+          <button disabled={busy} className="rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm font-medium">{busy ? "Thinking…" : "Ask"}</button>
+        </form>
+      </div>
+      {[...chat].reverse().map((m, i) => (
+        <div key={i} className="rounded-2xl border bg-card p-4 text-sm">
+          <div className="font-semibold">{m.q}</div>
+          <div className="mt-2 whitespace-pre-wrap leading-relaxed">{m.a}</div>
+        </div>
+      ))}
     </div>
   );
 }
