@@ -7,8 +7,11 @@ import {
   saveProduct, deleteProduct, saveCategory, saveCoupon, deleteCoupon,
   saveVariant, deleteVariant, listVariants, getMarketingData, sendCartReminder,
   saveStore, deleteStore, getCustomers, setAdminRole, getReviews, deleteReview,
-  deleteCategory, getOrderItems, uploadImage, saveOrderDelivery, getSalesReport, askAssistant,
+  deleteCategory, getOrderItems,
 } from "@/lib/admin.functions";
+import {
+  uploadImage, saveOrderDelivery, getSalesReport, askAssistant,
+} from "@/lib/admin-extra.functions";
 import { bdt } from "@/lib/format";
 import { resolveImage } from "@/lib/queries";
 import { toast } from "sonner";
