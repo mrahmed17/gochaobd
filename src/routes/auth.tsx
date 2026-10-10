@@ -8,7 +8,7 @@ import { Loader2, Mail, Chrome, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>): { next?: string } =>
-    typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//")
+    typeof s.next === "string" && /^\/(?![\/\\])/.test(s.next) && !/[\\\x00-\x1f]/.test(s.next)
       ? { next: s.next }
       : {},
   head: () => ({ meta: [{ title: "Sign in — GochaoBD" }, { name: "robots", content: "noindex" }] }),
@@ -32,7 +32,12 @@ function AuthPage() {
   }
 
   function goNext() {
-    if (next) { window.location.href = next; return; }
+    if (next) {
+      try {
+        const u = new URL(next, window.location.origin);
+        if (u.origin === window.location.origin) { window.location.href = u.pathname + u.search + u.hash; return; }
+      } catch { /* fall through */ }
+    }
     nav({ to: "/account", replace: true });
   }
 
