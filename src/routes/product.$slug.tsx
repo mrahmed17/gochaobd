@@ -8,7 +8,8 @@ import { bdt } from "@/lib/format";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package, BellRing } from "lucide-react";
+import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package, BellRing, Zap } from "lucide-react";
+import { QuickCheckout } from "@/components/QuickCheckout";
 
 
 export const Route = createFileRoute("/product/$slug")({
@@ -72,6 +73,7 @@ function ProductPage() {
   const [qty, setQty] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
   const [variant, setVariant] = useState<string | null>(null);
+  const [quick, setQuick] = useState(false);
   const { data: variants = [] } = useQuery({ ...variantsQuery(product?.id ?? ""), enabled: !!product });
   if (!product) return null;
   const chosen = variants.find((v) => v.label === variant) ?? null;
@@ -86,6 +88,11 @@ function ProductPage() {
     if (variants.length && !variant) { toast.error("Please select an option"); return; }
     if (stock <= 0) { toast.error("Out of stock"); return; }
     cart.add({ id: product!.id, slug: product!.slug, name: product!.name, price, image: images[imgIdx] ?? images[0], variant }, qty);
+  }
+  function buyNow() {
+    if (variants.length && !variant) { toast.error("Please select an option"); return; }
+    if (stock <= 0) { toast.error("Out of stock"); return; }
+    setQuick(true);
   }
 
   return (
@@ -176,6 +183,14 @@ function ProductPage() {
                 <Heart className={`h-5 w-5 ${cart.inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`} />
               </button>
             </div>
+            <button
+              onClick={buyNow}
+              disabled={stock <= 0}
+              className="mt-3 w-full rounded-full bg-accent-orange text-accent-orange-foreground py-3 text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Zap className="h-4 w-4" /> Buy Now — এখনই কিনুন
+            </button>
+            <QuickCheckout open={quick} onOpenChange={setQuick} item={{ productId: product.id, name: product.name, price, image: images[imgIdx] ?? images[0], variant, qty }} />
 
             {stock <= 0 && <StockAlert productId={product.id} />}
 
