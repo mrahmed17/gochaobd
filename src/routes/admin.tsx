@@ -365,6 +365,10 @@ function AdminPage() {
                   </tr>
                   {openOrder === o.id && (
                     <tr><td colSpan={4} className="p-3 bg-muted/50 text-xs">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        <button type="button" disabled={!orderItems[o.id]} onClick={() => printInvoice(o, orderItems[o.id] ?? [], "a4")} className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50">🖨 A4 Invoice</button>
+                        <button type="button" disabled={!orderItems[o.id]} onClick={() => printInvoice(o, orderItems[o.id] ?? [], "pos")} className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50">🧾 POS Slip (80mm)</button>
+                      </div>
                       <DeliveryProgress order={o} />
                       <DeliveryForm order={o} onSaved={reload} />
                       <CourierSmsPanel order={o} onDone={reload} />
