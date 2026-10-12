@@ -89,6 +89,24 @@ export type Database = {
         }
         Relationships: []
       }
+      carts: {
+        Row: {
+          items: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          items?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          items?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -632,6 +650,7 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
+          images: string[]
           product_id: string
           rating: number
           user_id: string | null
@@ -641,6 +660,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
+          images?: string[]
           product_id: string
           rating: number
           user_id?: string | null
@@ -650,6 +670,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           id?: string
+          images?: string[]
           product_id?: string
           rating?: number
           user_id?: string | null
