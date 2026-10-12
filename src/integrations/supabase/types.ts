@@ -165,6 +165,62 @@ export type Database = {
           },
         ]
       }
+      courier_dispatches: {
+        Row: {
+          cod_amount_bdt: number
+          consignment_id: string | null
+          courier: string
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          mode: string
+          order_id: string
+          request_payload: Json
+          response_payload: Json | null
+          status: string
+          tracking_code: string | null
+        }
+        Insert: {
+          cod_amount_bdt?: number
+          consignment_id?: string | null
+          courier: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          mode?: string
+          order_id: string
+          request_payload?: Json
+          response_payload?: Json | null
+          status?: string
+          tracking_code?: string | null
+        }
+        Update: {
+          cod_amount_bdt?: number
+          consignment_id?: string | null
+          courier?: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          mode?: string
+          order_id?: string
+          request_payload?: Json
+          response_payload?: Json | null
+          status?: string
+          tracking_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_dispatches_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty: {
         Row: {
           created_at: string
@@ -194,34 +250,52 @@ export type Database = {
       }
       notifications: {
         Row: {
+          attempts: number
           body: string | null
           channel: string
           created_at: string
+          error: string | null
           id: string
           order_id: string | null
+          provider: string | null
+          provider_ref: string | null
           recipient: string
+          sent_at: string | null
           status: string
           subject: string | null
+          template: string | null
         }
         Insert: {
+          attempts?: number
           body?: string | null
           channel?: string
           created_at?: string
+          error?: string | null
           id?: string
           order_id?: string | null
+          provider?: string | null
+          provider_ref?: string | null
           recipient: string
+          sent_at?: string | null
           status?: string
           subject?: string | null
+          template?: string | null
         }
         Update: {
+          attempts?: number
           body?: string | null
           channel?: string
           created_at?: string
+          error?: string | null
           id?: string
           order_id?: string | null
+          provider?: string | null
+          provider_ref?: string | null
           recipient?: string
+          sent_at?: string | null
           status?: string
           subject?: string | null
+          template?: string | null
         }
         Relationships: [
           {
@@ -288,8 +362,10 @@ export type Database = {
         Row: {
           address_line: string
           city: string
+          consignment_id: string | null
           coupon_code: string | null
           courier: string | null
+          courier_status: string | null
           created_at: string
           customer_name: string
           customer_phone: string
@@ -297,6 +373,7 @@ export type Database = {
           delivery_note: string | null
           delivery_zone: string
           discount_bdt: number
+          dispatched_at: string | null
           district: string | null
           guest_email: string | null
           id: string
@@ -319,8 +396,10 @@ export type Database = {
         Insert: {
           address_line: string
           city: string
+          consignment_id?: string | null
           coupon_code?: string | null
           courier?: string | null
+          courier_status?: string | null
           created_at?: string
           customer_name: string
           customer_phone: string
@@ -328,6 +407,7 @@ export type Database = {
           delivery_note?: string | null
           delivery_zone?: string
           discount_bdt?: number
+          dispatched_at?: string | null
           district?: string | null
           guest_email?: string | null
           id?: string
@@ -350,8 +430,10 @@ export type Database = {
         Update: {
           address_line?: string
           city?: string
+          consignment_id?: string | null
           coupon_code?: string | null
           courier?: string | null
+          courier_status?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string
@@ -359,6 +441,7 @@ export type Database = {
           delivery_note?: string | null
           delivery_zone?: string
           discount_bdt?: number
+          dispatched_at?: string | null
           district?: string | null
           guest_email?: string | null
           id?: string
