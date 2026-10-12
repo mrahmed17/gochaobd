@@ -155,3 +155,84 @@ export const askAssistant = createServerFn({ method: "POST" })
     if (failure && !answer) throw new Error(failure);
     return { answer: answer.trim() || "No answer was produced. Please rephrase your question." };
   });
+
+/* ---------------- Courier dispatch + SMS outbox ----------------
+   Payloads are built in each provider's real format. When the provider's
+   API keys are set (STEADFAST_API_KEY/STEADFAST_SECRET_KEY, SMS_API_KEY/SMS_SENDER_ID)
+   the call goes live; otherwise it is recorded in sandbox mode. */
+
+const SMS_TEMPLATES = {
+  confirmed: (o: any) => `GochaoBD: Your order ${o.order_number} (৳${o.total_bdt}) is confirmed. Thank you!`,
+  shipped: (o: any) => `GochaoBD: Order ${o.order_number} has been handed to ${o.courier ?? "our courier"}${o.tracking_number ? `, tracking ${o.tracking_number}` : ""}.`,
+  delivered: (o: any) => `GochaoBD: Order ${o.order_number} delivered. Hope you love it!`,
+} as const;
+
+export const dispatchToCourier = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ orderId: z.string().uuid(), courier: z.enum(["Steadfast", "Pathao"]) }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: o } = await supabaseAdmin.from("orders").select("*").eq("id", data.orderId).maybeSingle();
+    if (!o) throw new Error("Order not found");
+    if (o.status === "cancelled") throw new Error("Cancelled orders cannot be dispatched");
+    const cod = o.payment_status === "paid" ? 0 : o.total_bdt;
+    const address = [o.address_line, o.city, o.district].filter(Boolean).join(", ");
+    const payload = data.courier === "Steadfast"
+      ? { invoice: o.order_number, recipient_name: o.customer_name, recipient_phone: o.customer_phone, recipient_address: address, cod_amount: cod, note: o.delivery_note ?? o.notes ?? "" }
+      : { merchant_order_id: o.order_number, recipient_name: o.customer_name, recipient_phone: o.customer_phone, recipient_address: address, delivery_type: 48, item_type: 2, item_quantity: 1, item_weight: 0.5, amount_to_collect: cod, special_instruction: o.delivery_note ?? "" };
+
+    let mode = "sandbox", status = "queued", consignment: string | null = `SBX-${Date.now().toString(36).toUpperCase()}`, tracking: string | null = consignment, response: any = { sandbox: true }, error: string | null = null;
+    const key = process.env["STEADFAST_API_KEY"], secret = process.env["STEADFAST_SECRET_KEY"];
+    if (data.courier === "Steadfast" && key && secret) {
+      mode = "live";
+      try {
+        const r = await fetch("https://portal.packzy.com/api/v1/create_order", { method: "POST", headers: { "Api-Key": key, "Secret-Key": secret, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        response = await r.json().catch(() => ({}));
+        if (!r.ok || !response?.consignment) throw new Error(response?.message ?? `HTTP ${r.status}`);
+        consignment = String(response.consignment.consignment_id); tracking = response.consignment.tracking_code ?? null; status = response.consignment.status ?? "in_review";
+      } catch (e: any) { status = "failed"; error = e.message; consignment = null; tracking = null; }
+    }
+    await supabaseAdmin.from("courier_dispatches").insert({ order_id: o.id, courier: data.courier, mode, status, consignment_id: consignment, tracking_code: tracking, cod_amount_bdt: cod, request_payload: payload, response_payload: response, error, created_by: context.userId });
+    if (status === "failed") throw new Error(`Courier rejected: ${error}`);
+    await supabaseAdmin.from("orders").update({ courier: data.courier, consignment_id: consignment, tracking_number: tracking, courier_status: status, dispatched_at: new Date().toISOString(), status: o.status === "delivered" ? o.status : "shipped", shipped_at: o.shipped_at ?? new Date().toISOString() }).eq("id", o.id);
+    return { mode, consignment, tracking };
+  });
+
+export const sendOrderSms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ orderId: z.string().uuid(), template: z.enum(["confirmed", "shipped", "delivered"]) }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: o } = await supabaseAdmin.from("orders").select("*").eq("id", data.orderId).maybeSingle();
+    if (!o) throw new Error("Order not found");
+    const body = SMS_TEMPLATES[data.template](o);
+    const key = process.env["SMS_API_KEY"], sender = process.env["SMS_SENDER_ID"];
+    let status = "sandbox", ref: string | null = null, error: string | null = null, sentAt: string | null = null;
+    if (key && sender) {
+      try {
+        const q = new URLSearchParams({ api_key: key, type: "text", number: o.customer_phone.replace(/^\+?88/, "88").replace(/^0/, "880"), senderid: sender, message: body });
+        const r = await fetch(`https://bulksmsbd.net/api/smsapi?${q}`);
+        const j: any = await r.json().catch(() => ({}));
+        if (!r.ok || (j.response_code && j.response_code !== 202)) throw new Error(j.error_message ?? `HTTP ${r.status}`);
+        status = "sent"; ref = String(j.message_id ?? ""); sentAt = new Date().toISOString();
+      } catch (e: any) { status = "failed"; error = e.message; }
+    }
+    await supabaseAdmin.from("notifications").insert({ order_id: o.id, channel: "sms", recipient: o.customer_phone, subject: data.template, body, status, provider: key ? "bulksmsbd" : "sandbox", provider_ref: ref, template: data.template, attempts: 1, sent_at: sentAt, error });
+    if (status === "failed") throw new Error(`SMS failed: ${error}`);
+    return { status };
+  });
+
+export const getOrderComms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ orderId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [d, n] = await Promise.all([
+      supabaseAdmin.from("courier_dispatches").select("id, courier, mode, status, consignment_id, cod_amount_bdt, error, created_at").eq("order_id", data.orderId).order("created_at", { ascending: false }),
+      supabaseAdmin.from("notifications").select("id, channel, recipient, body, status, error, created_at").eq("order_id", data.orderId).order("created_at", { ascending: false }),
+    ]);
+    return { dispatches: d.data ?? [], messages: n.data ?? [] };
+  });

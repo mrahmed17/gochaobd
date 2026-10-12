@@ -10,7 +10,7 @@ import {
   deleteCategory, getOrderItems,
 } from "@/lib/admin.functions";
 import {
-  uploadImage, saveOrderDelivery, getSalesReport, askAssistant,
+  uploadImage, saveOrderDelivery, getSalesReport, askAssistant, dispatchToCourier, sendOrderSms, getOrderComms,
 } from "@/lib/admin-extra.functions";
 import { bdt } from "@/lib/format";
 import { resolveImage } from "@/lib/queries";
@@ -367,6 +367,7 @@ function AdminPage() {
                     <tr><td colSpan={4} className="p-3 bg-muted/50 text-xs">
                       <DeliveryProgress order={o} />
                       <DeliveryForm order={o} onSaved={reload} />
+                      <CourierSmsPanel order={o} onDone={reload} />
                       <div className="grid sm:grid-cols-2 gap-3 mt-3">
                         <div>
                           <div className="font-semibold">Delivery</div>
@@ -940,6 +941,38 @@ function AssistantPanel() {
           <div className="font-semibold">{m.q}</div>
           <div className="mt-2 whitespace-pre-wrap leading-relaxed">{m.a}</div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function CourierSmsPanel({ order, onDone }: { order: any; onDone: () => void }) {
+  const [log, setLog] = useState<{ dispatches: any[]; messages: any[] }>({ dispatches: [], messages: [] });
+  const [busy, setBusy] = useState(false);
+  const load = () => getOrderComms({ data: { orderId: order.id } }).then(setLog).catch(() => {});
+  useEffect(() => { load(); }, [order.id]);
+  const run = async (fn: () => Promise<any>, ok: string) => {
+    setBusy(true);
+    try { await fn(); toast.success(ok); load(); onDone(); } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 rounded-xl border bg-background p-3 space-y-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="font-semibold mr-1">Send to courier:</span>
+        {(["Steadfast", "Pathao"] as const).map((c) => (
+          <button key={c} disabled={busy} onClick={() => run(() => dispatchToCourier({ data: { orderId: order.id, courier: c } }), `Sent to ${c}`)} className="rounded-full border px-3 py-1 hover:bg-muted">{c}</button>
+        ))}
+        <span className="font-semibold ml-3 mr-1">SMS:</span>
+        {(["confirmed", "shipped", "delivered"] as const).map((t) => (
+          <button key={t} disabled={busy} onClick={() => run(() => sendOrderSms({ data: { orderId: order.id, template: t } }), "SMS recorded")} className="rounded-full border px-3 py-1 hover:bg-muted">{t}</button>
+        ))}
+      </div>
+      {order.consignment_id && <div>Consignment: <b>{order.consignment_id}</b> · {order.courier_status}</div>}
+      {log.dispatches.map((d) => (
+        <div key={d.id} className="text-muted-foreground">🚚 {d.courier} · {d.mode} · {d.status} · COD {bdt(d.cod_amount_bdt)}{d.error ? ` · ${d.error}` : ""} · {new Date(d.created_at).toLocaleString()}</div>
+      ))}
+      {log.messages.map((m) => (
+        <div key={m.id} className="text-muted-foreground">✉ {m.channel} → {m.recipient} · {m.status}: {m.body}</div>
       ))}
     </div>
   );
