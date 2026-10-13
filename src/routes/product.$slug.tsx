@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package, BellRing, Zap } from "lucide-react";
 import { QuickCheckout } from "@/components/QuickCheckout";
+import { whatsappLink } from "@/lib/contact";
+import { uploadReviewImage } from "@/lib/reviews.functions";
+import { MessageCircle, ImagePlus, X } from "lucide-react";
 
 
 export const Route = createFileRoute("/product/$slug")({
@@ -190,6 +193,13 @@ function ProductPage() {
             >
               <Zap className="h-4 w-4" /> Buy Now — এখনই কিনুন
             </button>
+            <a
+              href={whatsappLink(`আমি এই পণ্যটি অর্ডার করতে চাই:\n${product.name}${variant ? ` (${variant})` : ""}\nপরিমাণ: ${qty}\nদাম: ${bdt(price)}\n${typeof window !== "undefined" ? window.location.href : ""}`)}
+              target="_blank" rel="noreferrer"
+              className="mt-3 w-full rounded-full border-2 border-brand text-brand py-3 text-sm font-semibold inline-flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="h-4 w-4" /> Order via WhatsApp
+            </a>
             <QuickCheckout open={quick} onOpenChange={setQuick} item={{ productId: product.id, name: product.name, price, image: images[imgIdx] ?? images[0], variant, qty }} />
 
             {stock <= 0 && <StockAlert productId={product.id} />}
@@ -279,6 +289,24 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function addPhotos(files: FileList | null) {
+    if (!files?.length) return;
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) { toast.error("Please sign in to add photos"); return; }
+    setUploading(true);
+    try {
+      for (const f of Array.from(files).slice(0, 4 - photos.length)) {
+        if (f.size > 4 * 1024 * 1024) { toast.error(`${f.name}: max 4 MB`); continue; }
+        const base64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(f); });
+        const { url } = await uploadReviewImage({ data: { contentType: f.type, base64 } });
+        setPhotos((p) => [...p, url].slice(0, 4));
+      }
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Upload failed"); }
+    finally { setUploading(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -292,9 +320,11 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
         author_name: (u.user.user_metadata?.full_name as string) || u.user.email?.split("@")[0] || "Customer",
         rating,
         comment: comment.trim() || null,
+        images: photos,
       });
       if (error) throw error;
       setComment("");
+      setPhotos([]);
       toast.success("Thanks for your review!");
       qc.invalidateQueries({ queryKey: ["reviews", productId] });
       qc.invalidateQueries({ queryKey: ["product", slug] });
@@ -317,7 +347,21 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
           ))}
         </div>
         <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Share your experience…" className="mt-3 w-full rounded-xl border px-3 py-2 text-sm bg-background" />
-        <button disabled={busy} className="mt-2 rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm disabled:opacity-60">Post review</button>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {photos.map((u, i) => (
+            <div key={u} className="relative h-16 w-16">
+              <img src={u} alt="" className="h-16 w-16 rounded-lg object-cover" />
+              <button type="button" onClick={() => setPhotos(photos.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 rounded-full bg-background border p-0.5" aria-label="Remove photo"><X className="h-3 w-3" /></button>
+            </div>
+          ))}
+          {photos.length < 4 && (
+            <label className="h-16 px-3 rounded-lg border border-dashed grid place-items-center text-xs text-muted-foreground cursor-pointer">
+              <span className="inline-flex items-center gap-1"><ImagePlus className="h-4 w-4" />{uploading ? "Uploading…" : "Add photos"}</span>
+              <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden disabled={uploading} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+            </label>
+          )}
+        </div>
+        <button disabled={busy || uploading} className="mt-2 rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm disabled:opacity-60">Post review</button>
       </form>
       <ul className="mt-4 space-y-3">
         {reviews.length === 0 && <li className="text-sm text-muted-foreground">No reviews yet — be the first!</li>}
@@ -328,6 +372,11 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
               <span className="text-xs text-accent-orange">{"★".repeat(r.rating)}</span>
             </div>
             {r.comment && <p className="mt-1 text-sm text-muted-foreground">{r.comment}</p>}
+            {r.images?.length > 0 && (
+              <div className="mt-2 flex gap-2 flex-wrap">
+                {r.images.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="Customer photo" loading="lazy" className="h-20 w-20 rounded-lg object-cover" /></a>)}
+              </div>
+            )}
             <time className="mt-1 block text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</time>
           </li>
         ))}

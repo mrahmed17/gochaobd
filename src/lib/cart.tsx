@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/analytics";
@@ -45,6 +45,17 @@ const ABANDON_KEY = "gocha_cart_saved_at";
 const lineId = (productId: string, variant?: string | null) =>
   variant ? `${productId}::${variant}` : productId;
 
+/** Merge two carts by line id, keeping the larger quantity of each line. */
+export function mergeCarts(a: CartItem[], b: CartItem[]): CartItem[] {
+  const map = new Map<string, CartItem>();
+  for (const i of [...a, ...b]) {
+    if (!i?.id) continue;
+    const ex = map.get(i.id);
+    map.set(i.id, ex ? { ...ex, qty: Math.max(ex.qty, i.qty) } : i);
+  }
+  return [...map.values()];
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
@@ -66,6 +77,41 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hydrated) localStorage.setItem(WISH_KEY, JSON.stringify(wishlist));
   }, [wishlist, hydrated]);
+
+  // Multi-device sync: merge local cart with the account cart on sign-in, then keep it saved.
+  const [syncUser, setSyncUser] = useState<string | null>(null);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  useEffect(() => {
+    if (!hydrated) return;
+    let current: string | null = null;
+    async function pull(uid: string) {
+      const { data } = await supabase.from("carts").select("items").eq("user_id", uid).maybeSingle();
+      const remote = (Array.isArray(data?.items) ? data!.items : []) as unknown as CartItem[];
+      const merged = mergeCarts(itemsRef.current, remote);
+      setItems(merged);
+      await supabase.from("carts").upsert({ user_id: uid, items: merged as any });
+      setSyncUser(uid);
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      const uid = data.session?.user.id ?? null;
+      if (uid && uid !== current) { current = uid; pull(uid); }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user.id ?? null;
+      if (event === "SIGNED_OUT") { current = null; setSyncUser(null); setItems([]); return; }
+      if (uid && uid !== current && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) { current = uid; pull(uid); }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!syncUser) return;
+    const t = setTimeout(() => {
+      supabase.from("carts").upsert({ user_id: syncUser, items: items as any }).then(() => {});
+    }, 800);
+    return () => clearTimeout(t);
+  }, [items, syncUser]);
 
   // Abandoned-cart capture: snapshot the cart 60s after the last change.
   useEffect(() => {

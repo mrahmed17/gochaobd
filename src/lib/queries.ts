@@ -171,6 +171,7 @@ export interface Review {
   author_name: string;
   rating: number;
   comment: string | null;
+  images: string[];
   created_at: string;
 }
 
@@ -180,7 +181,7 @@ export const reviewsQuery = (productId: string) =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reviews")
-        .select("id, author_name, rating, comment, created_at")
+        .select("id, author_name, rating, comment, images, created_at")
         .eq("product_id", productId)
         .order("created_at", { ascending: false });
       if (error) throw error;
