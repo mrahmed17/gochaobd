@@ -155,7 +155,12 @@ export const placeOrder = createServerFn({ method: "POST" })
     const { error: iErr } = await supabaseAdmin
       .from("order_items")
       .insert(lines.map((l) => ({ ...l, order_id: order.id })));
-    if (iErr) throw new Error(iErr.message);
+    if (iErr) {
+      // Stock is reserved atomically per line; roll back the order if any line can't be fulfilled.
+      await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      const m = /OUT_OF_STOCK: (.*)/.exec(iErr.message);
+      throw new Error(m ? `দুঃখিত, "${m[1]}" পর্যাপ্ত স্টকে নেই। পরিমাণ কমিয়ে আবার চেষ্টা করুন।` : "Could not place order");
+    }
 
     const recipient = userEmail ?? (data.customer.email || data.customer.phone);
     if (recipient) {
