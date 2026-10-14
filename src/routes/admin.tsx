@@ -111,6 +111,17 @@ function AdminPage() {
     } catch (e: any) { toast.error(e.message ?? "Update failed"); }
   }
 
+  const [bulkSel, setBulkSel] = useState<string[]>([]);
+  async function bulkStatus(status: string) {
+    if (status === "cancelled" && !confirm(`Cancel ${bulkSel.length} orders? Stock will be returned.`)) return;
+    let ok = 0;
+    for (const id of bulkSel) {
+      try { await updateOrderStatus({ data: { id, status: status as any } }); ok++; } catch { /* counted below */ }
+    }
+    toast.success(`${ok}/${bulkSel.length} orders marked ${status}`);
+    setBulkSel([]); reload();
+  }
+
   async function setPayment(id: string, payment_status: "paid" | "failed") {
     try { await updatePaymentStatus({ data: { id, payment_status } }); toast.success("Payment updated"); reload(); }
     catch (e: any) { toast.error(e.message ?? "Update failed"); }
@@ -324,6 +335,15 @@ function AdminPage() {
               <button key={s} onClick={() => setOrderFilter(orderFilter === s ? "all" : s)} className={`rounded-full border px-3 py-1 capitalize ${orderFilter === s ? "bg-brand text-brand-foreground" : "bg-card"}`}>{s} · {orders.filter((o) => o.status === s).length}</button>
             ))}
           </div>
+          {bulkSel.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-brand-soft/30 px-3 py-2 text-sm">
+              <span className="font-medium">{bulkSel.length} selected</span>
+              {["confirmed", "shipped", "delivered", "cancelled"].map((s) => (
+                <button key={s} onClick={() => bulkStatus(s)} className="rounded-full border bg-background px-3 py-1 text-xs capitalize">Mark {s}</button>
+              ))}
+              <button onClick={() => setBulkSel([])} className="ml-auto text-xs underline">Clear</button>
+            </div>
+          )}
           <div className="rounded-2xl border overflow-x-auto bg-card">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left">
@@ -341,7 +361,7 @@ function AdminPage() {
                 }).map((o) => (
                   <Fragment key={o.id}>
                   <tr>
-                    <td className="p-3 font-mono text-xs">{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div>
+                    <td className="p-3 font-mono text-xs"><input type="checkbox" aria-label={`Select ${o.order_number}`} checked={bulkSel.includes(o.id)} onChange={(e) => setBulkSel(e.target.checked ? [...bulkSel, o.id] : bulkSel.filter((x) => x !== o.id))} className="mr-2 align-middle" />{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div>
                       <button onClick={() => toggleOrder(o.id)} className="mt-1 font-sans text-brand underline">{openOrder === o.id ? "Hide details" : "Details"}</button>
                     </td>
                     <td className="p-3">{o.customer_name}<div className="text-xs text-muted-foreground">{o.customer_phone}</div></td>
