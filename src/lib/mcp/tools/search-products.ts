@@ -5,10 +5,17 @@ import { supabaseAnon } from "../supabase";
 export default defineTool({
   name: "search_products",
   title: "Search products",
-  description: "Search the GochaoBD catalog by keyword and return matching products with price and stock.",
+  description:
+    "Search the GochaoBD catalog by keyword and return matching products with price and stock.",
   inputSchema: {
-    query: z.string().trim().describe("Search keyword, e.g. 'kitchen rack'. Empty returns featured products."),
-    limit: z.number().int().describe("Maximum number of products to return (1-50). Defaults to 10."),
+    query: z
+      .string()
+      .trim()
+      .describe("Search keyword, e.g. 'kitchen rack'. Empty returns featured products."),
+    limit: z
+      .number()
+      .int()
+      .describe("Maximum number of products to return (1-50). Defaults to 10."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ query, limit }) => {
@@ -16,7 +23,9 @@ export default defineTool({
     const supabase = supabaseAnon();
     let q = supabase
       .from("products")
-      .select("id, name, slug, price_bdt, compare_price_bdt, stock, rating, review_count, is_featured")
+      .select(
+        "id, name, slug, price_bdt, compare_price_bdt, stock, rating, review_count, is_featured",
+      )
       .limit(take);
     if (query) q = q.ilike("name", `%${query}%`);
     else q = q.eq("is_featured", true);

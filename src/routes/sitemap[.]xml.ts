@@ -29,8 +29,10 @@ export const Route = createFileRoute("/sitemap.xml")({
           supabase.from("categories").select("slug"),
           supabase.from("products").select("slug"),
         ]);
-        for (const c of cats ?? []) entries.push({ path: `/category/${c.slug}`, changefreq: "weekly", priority: "0.7" });
-        for (const p of products ?? []) entries.push({ path: `/product/${p.slug}`, changefreq: "weekly", priority: "0.7" });
+        for (const c of cats ?? [])
+          entries.push({ path: `/category/${c.slug}`, changefreq: "weekly", priority: "0.7" });
+        for (const p of products ?? [])
+          entries.push({ path: `/product/${p.slug}`, changefreq: "weekly", priority: "0.7" });
 
         const urls = entries.map(
           (e) =>

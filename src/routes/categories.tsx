@@ -8,16 +8,25 @@ export const Route = createFileRoute("/categories")({
   head: () => ({
     meta: [
       { title: "Categories — GochaoBD" },
-      { name: "description", content: "Browse GochaoBD categories: storage, kitchen accessories, wardrobe organizers and smart home essentials." },
+      {
+        name: "description",
+        content:
+          "Browse GochaoBD categories: storage, kitchen accessories, wardrobe organizers and smart home essentials.",
+      },
       { property: "og:title", content: "Shop by category — GochaoBD" },
-      { property: "og:description", content: "Find the right organizer for every room in your home." },
+      {
+        property: "og:description",
+        content: "Find the right organizer for every room in your home.",
+      },
       { property: "og:url", content: "https://gochaobd.lovable.app/categories" },
     ],
     links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/categories" }],
   }),
   component: CategoriesPage,
   loader: ({ context }) => context.queryClient.ensureQueryData(categoriesQuery()),
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>
+  ),
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 
@@ -29,9 +38,19 @@ function CategoriesPage() {
         <h1 className="text-3xl md:text-4xl font-display">Categories</h1>
         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {data.map((c) => (
-            <Link key={c.id} to="/category/$slug" params={{ slug: c.slug }} className="group flex items-center gap-4 rounded-2xl border p-3 bg-card hover:shadow-lift transition">
+            <Link
+              key={c.id}
+              to="/category/$slug"
+              params={{ slug: c.slug }}
+              className="group flex items-center gap-4 rounded-2xl border p-3 bg-card hover:shadow-lift transition"
+            >
               <div className="h-20 w-20 shrink-0 rounded-xl overflow-hidden bg-muted">
-                <img src={resolveImage(c.image_url)} alt={c.name} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img
+                  src={resolveImage(c.image_url)}
+                  alt={c.name}
+                  loading="lazy"
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="font-display text-lg">{c.name}</div>

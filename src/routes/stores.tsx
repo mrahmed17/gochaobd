@@ -8,9 +8,16 @@ export const Route = createFileRoute("/stores")({
   head: () => ({
     meta: [
       { title: "Our brands — GochaoBD" },
-      { name: "description", content: "Explore every GochaoBD brand: home organizers, baby, beauty, kitchen, fashion, plants and pet care — one account, one checkout." },
+      {
+        name: "description",
+        content:
+          "Explore every GochaoBD brand: home organizers, baby, beauty, kitchen, fashion, plants and pet care — one account, one checkout.",
+      },
       { property: "og:title", content: "All GochaoBD brands" },
-      { property: "og:description", content: "Home, Baby, Beauty, Kitchen, Fashion, Plant and Pet stores under one roof." },
+      {
+        property: "og:description",
+        content: "Home, Baby, Beauty, Kitchen, Fashion, Plant and Pet stores under one roof.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:url", content: "https://gochaobd.lovable.app/stores" },
@@ -21,7 +28,9 @@ export const Route = createFileRoute("/stores")({
     await context.queryClient.ensureQueryData(storesQuery());
   },
   component: StoresPage,
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>
+  ),
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 
@@ -46,13 +55,18 @@ function StoresPage() {
             >
               <div
                 className="h-10 w-10 rounded-xl"
-                style={{ background: `linear-gradient(135deg, ${s.theme_color}, ${s.accent_color})` }}
+                style={{
+                  background: `linear-gradient(135deg, ${s.theme_color}, ${s.accent_color})`,
+                }}
               />
               <h2 className="mt-3 font-display text-xl">{s.name}</h2>
               <p className="text-sm text-muted-foreground">{s.tagline}</p>
-              {s.description && <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{s.description}</p>}
+              {s.description && (
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{s.description}</p>
+              )}
               <span className="mt-3 inline-flex items-center gap-1 text-sm text-brand">
-                Visit store <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                Visit store{" "}
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
               </span>
             </Link>
           ))}

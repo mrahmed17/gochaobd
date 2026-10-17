@@ -41,9 +41,18 @@ export const Route = createFileRoute("/category/$slug")({
     await context.queryClient.ensureQueryData(productsQuery({ categorySlug: params.slug }));
     return { cat };
   },
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>
+  ),
   notFoundComponent: () => (
-    <AppShell><div className="p-8 text-center"><h1 className="font-display text-2xl">Category not found</h1><Link to="/categories" className="text-brand text-sm">Back to categories</Link></div></AppShell>
+    <AppShell>
+      <div className="p-8 text-center">
+        <h1 className="font-display text-2xl">Category not found</h1>
+        <Link to="/categories" className="text-brand text-sm">
+          Back to categories
+        </Link>
+      </div>
+    </AppShell>
   ),
 });
 
@@ -55,11 +64,15 @@ function CategoryPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <nav className="text-xs text-muted-foreground"><Link to="/categories">Categories</Link> / {cat.name}</nav>
+        <nav className="text-xs text-muted-foreground">
+          <Link to="/categories">Categories</Link> / {cat.name}
+        </nav>
         <h1 className="mt-2 text-3xl md:text-4xl font-display">{cat.name}</h1>
         <p className="text-sm text-muted-foreground mt-1">{products.length} products</p>
         <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {products.map((p) => <ProductCard key={p.id} product={p} />)}
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
         </div>
       </div>
       <Footer />

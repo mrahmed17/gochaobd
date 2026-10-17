@@ -5,8 +5,11 @@ import { notAuthenticated, supabaseForUser } from "../supabase";
 export default defineTool({
   name: "list_my_orders",
   title: "List my orders",
-  description: "List the signed-in customer's GochaoBD orders with status and totals, newest first.",
-  inputSchema: { limit: z.number().int().describe("Maximum number of orders to return (1-50). Defaults to 10.") },
+  description:
+    "List the signed-in customer's GochaoBD orders with status and totals, newest first.",
+  inputSchema: {
+    limit: z.number().int().describe("Maximum number of orders to return (1-50). Defaults to 10."),
+  },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ limit }, ctx) => {
     if (!ctx.isAuthenticated()) return notAuthenticated();

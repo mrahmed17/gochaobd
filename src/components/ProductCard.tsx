@@ -7,10 +7,12 @@ import { useCart } from "@/lib/cart";
 
 export function ProductCard({ product }: { product: Product }) {
   const { toggleWish, inWishlist } = useCart();
-  const price = product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
-  const discount = product.compare_price_bdt && product.compare_price_bdt > price
-    ? Math.round(((product.compare_price_bdt - price) / product.compare_price_bdt) * 100)
-    : 0;
+  const price =
+    product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
+  const discount =
+    product.compare_price_bdt && product.compare_price_bdt > price
+      ? Math.round(((product.compare_price_bdt - price) / product.compare_price_bdt) * 100)
+      : 0;
   return (
     <div className="group relative">
       <Link
@@ -36,11 +38,16 @@ export function ProductCard({ product }: { product: Product }) {
         )}
       </Link>
       <button
-        onClick={(e) => { e.preventDefault(); toggleWish(product.id); }}
+        onClick={(e) => {
+          e.preventDefault();
+          toggleWish(product.id);
+        }}
         aria-label="Wishlist"
         className="absolute top-2 right-2 h-8 w-8 grid place-items-center rounded-full bg-background/90 border shadow-soft"
       >
-        <Heart className={`h-4 w-4 ${inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`} />
+        <Heart
+          className={`h-4 w-4 ${inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`}
+        />
       </button>
       <div className="pt-2.5">
         <Link to="/product/$slug" params={{ slug: product.slug }} className="block">
@@ -54,7 +61,9 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mt-1 flex items-baseline gap-2">
           <span className="font-semibold">{bdt(price)}</span>
           {product.compare_price_bdt && product.compare_price_bdt > price && (
-            <span className="text-xs text-muted-foreground line-through">{bdt(product.compare_price_bdt)}</span>
+            <span className="text-xs text-muted-foreground line-through">
+              {bdt(product.compare_price_bdt)}
+            </span>
           )}
         </div>
       </div>

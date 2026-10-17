@@ -12,11 +12,17 @@ export default defineTool({
     const supabase = supabaseAnon();
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, slug, description, specs, price_bdt, compare_price_bdt, flash_price_bdt, stock, rating, review_count, delivery_days, cod_available, images")
+      .select(
+        "id, name, slug, description, specs, price_bdt, compare_price_bdt, flash_price_bdt, stock, rating, review_count, delivery_days, cod_available, images",
+      )
       .eq("slug", slug)
       .maybeSingle();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-    if (!data) return { content: [{ type: "text", text: `No product found with slug '${slug}'.` }], isError: true };
+    if (!data)
+      return {
+        content: [{ type: "text", text: `No product found with slug '${slug}'.` }],
+        isError: true,
+      };
     const { data: variants } = await supabase
       .from("product_variants")
       .select("id, label, price_bdt, stock")

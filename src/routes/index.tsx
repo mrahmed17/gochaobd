@@ -11,9 +11,20 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh" },
-      { name: "description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
-      { property: "og:title", content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh" },
-      { property: "og:description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
+      {
+        name: "description",
+        content:
+          "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh.",
+      },
+      {
+        property: "og:title",
+        content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh",
+      },
+      {
+        property: "og:description",
+        content:
+          "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh.",
+      },
       { property: "og:url", content: "https://gochaobd.lovable.app/" },
     ],
     links: [{ rel: "canonical", href: "https://gochaobd.lovable.app/" }],
@@ -27,7 +38,9 @@ export const Route = createFileRoute("/")({
       context.queryClient.ensureQueryData(productsQuery({ isNew: true })),
     ]);
   },
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">Failed to load: {(error as Error).message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-sm text-destructive">Failed to load: {(error as Error).message}</div>
+  ),
   notFoundComponent: () => <div className="p-6">Not found</div>,
 });
 
@@ -56,7 +69,11 @@ function HomePage() {
 }
 
 function SectionSkeleton() {
-  return <div className="mx-auto max-w-6xl px-4 py-8"><div className="h-40 rounded-2xl bg-muted animate-pulse" /></div>;
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="h-40 rounded-2xl bg-muted animate-pulse" />
+    </div>
+  );
 }
 
 function Hero() {
@@ -68,18 +85,30 @@ function Hero() {
             <Sparkles className="h-3 w-3" /> New season · Home organizers
           </div>
           <h1 className="mt-4 text-4xl md:text-6xl font-display leading-[1.05]">
-            <span className="sr-only">GochaoBD — Home organizers and kitchen essentials in Bangladesh. </span>
-            <span aria-hidden="true">A calmer home,<br />one shelf at a time.</span>
+            <span className="sr-only">
+              GochaoBD — Home organizers and kitchen essentials in Bangladesh.{" "}
+            </span>
+            <span aria-hidden="true">
+              A calmer home,
+              <br />
+              one shelf at a time.
+            </span>
           </h1>
           <p className="mt-4 text-muted-foreground max-w-md">
             Thoughtfully designed organizers and kitchen essentials — delivered across Bangladesh.
             Cash on delivery, easy returns.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link to="/shop" className="inline-flex items-center gap-2 rounded-full bg-brand text-brand-foreground px-5 py-3 text-sm font-medium btn-glow">
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-2 rounded-full bg-brand text-brand-foreground px-5 py-3 text-sm font-medium btn-glow"
+            >
               Shop now <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link to="/categories" className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium hover:bg-muted">
+            <Link
+              to="/categories"
+              className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium hover:bg-muted"
+            >
               Browse categories
             </Link>
           </div>
@@ -121,12 +150,21 @@ function Hero() {
 }
 
 function Marquee() {
-  const items = ["Free delivery over ৳1500", "COD available", "Easy 7-day returns", "Verified BD sellers", "Bulk order discounts"];
+  const items = [
+    "Free delivery over ৳1500",
+    "COD available",
+    "Easy 7-day returns",
+    "Verified BD sellers",
+    "Bulk order discounts",
+  ];
   return (
     <div className="bg-foreground text-background py-2 overflow-hidden">
       <div className="flex whitespace-nowrap gap-10 animate-marquee text-xs uppercase tracking-widest">
         {[...items, ...items, ...items].map((t, i) => (
-          <span key={i} className="flex items-center gap-2"><span className="h-1 w-1 rounded-full bg-accent-orange" />{t}</span>
+          <span key={i} className="flex items-center gap-2">
+            <span className="h-1 w-1 rounded-full bg-accent-orange" />
+            {t}
+          </span>
         ))}
       </div>
     </div>
@@ -147,11 +185,18 @@ function CategoryStrip() {
             className="group rounded-2xl border overflow-hidden bg-card hover:shadow-lift transition"
           >
             <div className="aspect-square bg-muted">
-              <img src={resolveImage(c.image_url)} alt={c.name} loading="lazy" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              <img
+                src={resolveImage(c.image_url)}
+                alt={c.name}
+                loading="lazy"
+                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
             </div>
             <div className="p-3">
               <div className="font-medium text-sm">{c.name}</div>
-              <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">Shop now <ArrowRight className="h-3 w-3" /></div>
+              <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                Shop now <ArrowRight className="h-3 w-3" />
+              </div>
             </div>
           </Link>
         ))}
@@ -166,7 +211,9 @@ function FlashSale() {
   return (
     <section className="mx-auto max-w-6xl px-4 py-4">
       <div className="rounded-3xl bg-gradient-to-br from-accent-orange to-accent-orange/80 text-accent-orange-foreground p-5 md:p-8">
-        <div className="flex items-center gap-2 text-sm font-medium"><Zap className="h-4 w-4" /> Flash Sale · Limited time</div>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Zap className="h-4 w-4" /> Flash Sale · Limited time
+        </div>
         <h2 className="mt-1 text-2xl md:text-3xl font-display">Deals under ৳700</h2>
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
           {data.slice(0, 4).map((p) => (
@@ -186,7 +233,9 @@ function BestSellers() {
     <section className="mx-auto max-w-6xl px-4 py-10">
       <SectionHeader title="Best sellers" href="/shop" />
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data.slice(0, 8).map((p) => <ProductCard key={p.id} product={p} />)}
+        {data.slice(0, 8).map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
       </div>
     </section>
   );
@@ -199,7 +248,9 @@ function NewArrivals() {
     <section className="mx-auto max-w-6xl px-4 py-10">
       <SectionHeader title="New arrivals" href="/shop" />
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data.slice(0, 8).map((p) => <ProductCard key={p.id} product={p} />)}
+        {data.slice(0, 8).map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
       </div>
     </section>
   );
@@ -232,9 +283,24 @@ function WhyUs() {
 
 function Reviews() {
   const rows = [
-    { name: "Nusrat J.", city: "Dhaka", text: "The spice jars are gorgeous and everything actually fits. My kitchen looks like Pinterest now.", rating: 5 },
-    { name: "Farhana R.", city: "Chattogram", text: "COD worked perfectly, delivery in 3 days. The drawer organizer is a game changer.", rating: 5 },
-    { name: "Sabina A.", city: "Sylhet", text: "Beautiful packaging and quality feels premium. Ordered twice already.", rating: 5 },
+    {
+      name: "Nusrat J.",
+      city: "Dhaka",
+      text: "The spice jars are gorgeous and everything actually fits. My kitchen looks like Pinterest now.",
+      rating: 5,
+    },
+    {
+      name: "Farhana R.",
+      city: "Chattogram",
+      text: "COD worked perfectly, delivery in 3 days. The drawer organizer is a game changer.",
+      rating: 5,
+    },
+    {
+      name: "Sabina A.",
+      city: "Sylhet",
+      text: "Beautiful packaging and quality feels premium. Ordered twice already.",
+      rating: 5,
+    },
   ];
   return (
     <section className="mx-auto max-w-6xl px-4 py-10">
@@ -244,7 +310,9 @@ function Reviews() {
           <div key={r.name} className="rounded-2xl border bg-card p-5">
             <div className="flex text-accent-orange">{"★".repeat(r.rating)}</div>
             <p className="mt-3 text-sm">{r.text}</p>
-            <div className="mt-4 text-xs text-muted-foreground">— {r.name}, {r.city}</div>
+            <div className="mt-4 text-xs text-muted-foreground">
+              — {r.name}, {r.city}
+            </div>
           </div>
         ))}
       </div>
@@ -258,7 +326,9 @@ function BeforeAfter() {
       <SectionHeader title="Before & after" />
       <div className="mt-4 rounded-3xl border bg-gradient-to-br from-brand-soft to-accent-orange-soft p-8 text-center">
         <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-          Real transformations from customers across Bangladesh — tag <span className="font-semibold text-foreground">@gochaobd</span> on Instagram to be featured here.
+          Real transformations from customers across Bangladesh — tag{" "}
+          <span className="font-semibold text-foreground">@gochaobd</span> on Instagram to be
+          featured here.
         </p>
       </div>
     </section>
@@ -270,10 +340,19 @@ function Newsletter() {
     <section className="mx-auto max-w-6xl px-4 py-12">
       <div className="rounded-3xl bg-foreground text-background p-8 md:p-12 text-center">
         <h2 className="text-2xl md:text-3xl font-display">Get 10% off your first order</h2>
-        <p className="mt-2 text-sm opacity-80">Join our newsletter — no spam, just occasional drops.</p>
+        <p className="mt-2 text-sm opacity-80">
+          Join our newsletter — no spam, just occasional drops.
+        </p>
         <form className="mt-5 mx-auto max-w-md flex gap-2" onSubmit={(e) => e.preventDefault()}>
-          <input type="email" required placeholder="your@email.com" className="flex-1 rounded-full bg-background/10 border border-background/20 px-4 py-3 text-sm placeholder:text-background/50 outline-none focus:border-background/60" />
-          <button className="rounded-full bg-accent-orange text-accent-orange-foreground px-5 py-3 text-sm font-medium">Join</button>
+          <input
+            type="email"
+            required
+            placeholder="your@email.com"
+            className="flex-1 rounded-full bg-background/10 border border-background/20 px-4 py-3 text-sm placeholder:text-background/50 outline-none focus:border-background/60"
+          />
+          <button className="rounded-full bg-accent-orange text-accent-orange-foreground px-5 py-3 text-sm font-medium">
+            Join
+          </button>
         </form>
       </div>
     </section>
@@ -284,7 +363,11 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
   return (
     <div className="flex items-baseline justify-between">
       <h2 className="text-xl md:text-2xl font-display">{title}</h2>
-      {href && <Link to={href} className="text-xs text-brand font-medium inline-flex items-center gap-1">See all <ArrowRight className="h-3 w-3" /></Link>}
+      {href && (
+        <Link to={href} className="text-xs text-brand font-medium inline-flex items-center gap-1">
+          See all <ArrowRight className="h-3 w-3" />
+        </Link>
+      )}
     </div>
   );
 }

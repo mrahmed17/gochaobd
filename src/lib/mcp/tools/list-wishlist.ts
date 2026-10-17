@@ -6,7 +6,9 @@ export default defineTool({
   name: "list_wishlist",
   title: "List my wishlist",
   description: "List the products saved to the signed-in customer's GochaoBD wishlist.",
-  inputSchema: { limit: z.number().int().describe("Maximum number of items to return (1-100). Defaults to 25.") },
+  inputSchema: {
+    limit: z.number().int().describe("Maximum number of items to return (1-100). Defaults to 25."),
+  },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ limit }, ctx) => {
     if (!ctx.isAuthenticated()) return notAuthenticated();

@@ -7,7 +7,7 @@ import getMyOrder from "./tools/get-my-order";
 import listWishlist from "./tools/list-wishlist";
 import addToWishlist from "./tools/add-to-wishlist";
 
-const projectRef = import.meta.env['VITE_SUPABASE_PROJECT_ID'] ?? "project-ref-unset";
+const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
 
 export default defineMcp({
   name: "gochaobd-home-organizer-hub",

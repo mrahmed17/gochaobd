@@ -89,7 +89,11 @@ export const categoriesQuery = (storeSlug?: string) =>
     queryFn: async () => {
       let q = supabase.from("categories").select("id, slug, name, image_url");
       if (storeSlug) {
-        const { data: s } = await supabase.from("stores").select("id").eq("slug", storeSlug).maybeSingle();
+        const { data: s } = await supabase
+          .from("stores")
+          .select("id")
+          .eq("slug", storeSlug)
+          .maybeSingle();
         if (s) q = q.eq("store_id", s.id);
       }
       const { data, error } = await q.order("sort_order");
@@ -98,7 +102,14 @@ export const categoriesQuery = (storeSlug?: string) =>
     },
   });
 
-export const productsQuery = (filter?: { categorySlug?: string; storeSlug?: string; flash?: boolean; featured?: boolean; isNew?: boolean; search?: string }) =>
+export const productsQuery = (filter?: {
+  categorySlug?: string;
+  storeSlug?: string;
+  flash?: boolean;
+  featured?: boolean;
+  isNew?: boolean;
+  search?: string;
+}) =>
   queryOptions({
     queryKey: ["products", filter ?? {}],
     queryFn: async () => {
@@ -108,11 +119,19 @@ export const productsQuery = (filter?: { categorySlug?: string; storeSlug?: stri
       if (filter?.isNew) q = q.eq("is_new", true);
       if (filter?.search) q = q.ilike("name", `%${filter.search}%`);
       if (filter?.storeSlug) {
-        const { data: s } = await supabase.from("stores").select("id").eq("slug", filter.storeSlug).maybeSingle();
+        const { data: s } = await supabase
+          .from("stores")
+          .select("id")
+          .eq("slug", filter.storeSlug)
+          .maybeSingle();
         if (s) q = q.eq("store_id", s.id);
       }
       if (filter?.categorySlug) {
-        const { data: cat } = await supabase.from("categories").select("id").eq("slug", filter.categorySlug).maybeSingle();
+        const { data: cat } = await supabase
+          .from("categories")
+          .select("id")
+          .eq("slug", filter.categorySlug)
+          .maybeSingle();
         if (cat) q = q.eq("category_id", cat.id);
       }
       const { data, error } = await q.order("created_at", { ascending: false });
@@ -125,7 +144,11 @@ export const productBySlugQuery = (slug: string) =>
   queryOptions({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*").eq("slug", slug).maybeSingle();
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
       if (error) throw error;
       return data as Product | null;
     },

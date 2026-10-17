@@ -4,7 +4,29 @@ import { useCart } from "@/lib/cart";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Lazy abandoned-cart recovery kick. There is no cron in this stack, so any
+ * storefront visit nudges the (idempotent) server job — at most once per hour
+ * per browser. The server-side nudged_at guard makes double-runs harmless.
+ */
+function useCartRecoveryKick() {
+  useEffect(() => {
+    const KEY = "gocha_nudge_kick";
+    try {
+      const last = Number(localStorage.getItem(KEY) ?? 0);
+      if (Date.now() - last < 3600_000) return;
+      localStorage.setItem(KEY, String(Date.now()));
+      import("@/lib/sms.functions")
+        .then((m) => m.sendCartRecoveryNudges({ data: {} }))
+        .catch(() => {});
+    } catch {
+      /* storage unavailable (private mode) — skip the kick */
+    }
+  }, []);
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
+  useCartRecoveryKick();
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <TopBar />
@@ -38,7 +60,9 @@ function TopBar() {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b">
         <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-brand text-brand-foreground font-display text-lg">G</div>
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-brand text-brand-foreground font-display text-lg">
+              G
+            </div>
             <span className="font-display text-lg leading-none">GochaoBD</span>
           </Link>
           <Link
@@ -54,7 +78,9 @@ function TopBar() {
             aria-label={user ? "My account" : "Sign in"}
           >
             <User className={`h-5 w-5 ${user ? "text-brand" : ""}`} />
-            <span className="hidden md:inline max-w-[120px] truncate">{user ? user.email?.split("@")[0] : "Sign in"}</span>
+            <span className="hidden md:inline max-w-[120px] truncate">
+              {user ? user.email?.split("@")[0] : "Sign in"}
+            </span>
           </Link>
           <Link
             to="/cart"
@@ -112,7 +138,9 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 py-10 grid gap-8 sm:grid-cols-2 md:grid-cols-4 text-sm">
         <div>
           <div className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-xl bg-brand text-brand-foreground font-display">G</div>
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-brand text-brand-foreground font-display">
+              G
+            </div>
             <span className="font-display text-lg">GochaoBD</span>
           </div>
           <p className="mt-3 text-muted-foreground">
@@ -122,26 +150,46 @@ export function Footer() {
         <div>
           <div className="font-semibold mb-3">Shop</div>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/shop">All products</Link></li>
-            <li><Link to="/categories">Categories</Link></li>
-            <li><Link to="/stores">Our brands</Link></li>
-            <li><Link to="/track">Track order</Link></li>
-            <li><Link to="/wishlist">Wishlist</Link></li>
+            <li>
+              <Link to="/shop">All products</Link>
+            </li>
+            <li>
+              <Link to="/categories">Categories</Link>
+            </li>
+            <li>
+              <Link to="/stores">Our brands</Link>
+            </li>
+            <li>
+              <Link to="/track">Track order</Link>
+            </li>
+            <li>
+              <Link to="/wishlist">Wishlist</Link>
+            </li>
           </ul>
         </div>
         <div>
           <div className="font-semibold mb-3">Company</div>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/about">About</Link></li>
-            <li><Link to="/contact">Contact</Link></li>
-            <li><Link to="/faq">FAQ</Link></li>
+            <li>
+              <Link to="/about">About</Link>
+            </li>
+            <li>
+              <Link to="/contact">Contact</Link>
+            </li>
+            <li>
+              <Link to="/faq">FAQ</Link>
+            </li>
           </ul>
         </div>
         <div>
           <div className="font-semibold mb-3">Policies</div>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/returns">Return & Refund</Link></li>
-            <li><Link to="/privacy">Privacy</Link></li>
+            <li>
+              <Link to="/returns">Return & Refund</Link>
+            </li>
+            <li>
+              <Link to="/privacy">Privacy</Link>
+            </li>
           </ul>
         </div>
       </div>

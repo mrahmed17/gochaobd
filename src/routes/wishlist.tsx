@@ -18,16 +18,24 @@ function WishlistPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="flex items-center gap-2"><Heart className="h-5 w-5 text-accent-orange fill-accent-orange" /><h1 className="text-2xl md:text-3xl font-display">Your wishlist</h1></div>
+        <div className="flex items-center gap-2">
+          <Heart className="h-5 w-5 text-accent-orange fill-accent-orange" />
+          <h1 className="text-2xl md:text-3xl font-display">Your wishlist</h1>
+        </div>
         {!wishlist.length ? (
           <div className="mt-8 rounded-2xl border p-8 text-center text-sm text-muted-foreground">
-            No favourites yet. <Link to="/shop" className="text-brand">Discover products</Link>
+            No favourites yet.{" "}
+            <Link to="/shop" className="text-brand">
+              Discover products
+            </Link>
           </div>
         ) : isLoading ? (
           <div className="mt-8 text-sm text-muted-foreground">Loading…</div>
         ) : (
           <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {data.map((p) => <ProductCard key={p.id} product={p} />)}
+            {data.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </div>
         )}
       </div>
