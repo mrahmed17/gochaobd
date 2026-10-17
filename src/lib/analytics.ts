@@ -12,7 +12,9 @@ export function track(event: string, params: Params = {}) {
     w.dataLayer?.push({ event, ...params });
     w.gtag?.("event", event, params);
     w.fbq?.("trackCustom", event, params);
-  } catch {}
+  } catch {
+    // Analytics must never break the app (blocked scripts, private mode).
+  }
 }
 
 export function pageView(path: string) {

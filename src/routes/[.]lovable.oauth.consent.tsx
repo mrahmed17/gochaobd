@@ -15,11 +15,13 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   },
   loader: async ({ location }) => {
     const authorizationId = new URLSearchParams(location.search).get("authorization_id")!;
-    const oauth = (supabase.auth as unknown as {
-      oauth: {
-        getAuthorizationDetails: (id: string) => Promise<{ data: any; error: any }>;
-      };
-    }).oauth;
+    const oauth = (
+      supabase.auth as unknown as {
+        oauth: {
+          getAuthorizationDetails: (id: string) => Promise<{ data: any; error: any }>;
+        };
+      }
+    ).oauth;
     const { data, error } = await oauth.getAuthorizationDetails(authorizationId);
     if (error) throw error;
     const immediate = data?.redirect_url ?? data?.redirect_to;
@@ -46,12 +48,14 @@ function Consent() {
   async function decide(approve: boolean) {
     setBusy(true);
     setError(null);
-    const oauth = (supabase.auth as unknown as {
-      oauth: {
-        approveAuthorization: (id: string) => Promise<{ data: any; error: any }>;
-        denyAuthorization: (id: string) => Promise<{ data: any; error: any }>;
-      };
-    }).oauth;
+    const oauth = (
+      supabase.auth as unknown as {
+        oauth: {
+          approveAuthorization: (id: string) => Promise<{ data: any; error: any }>;
+          denyAuthorization: (id: string) => Promise<{ data: any; error: any }>;
+        };
+      }
+    ).oauth;
     const { data, error } = approve
       ? await oauth.approveAuthorization(authorization_id)
       : await oauth.denyAuthorization(authorization_id);
@@ -77,7 +81,11 @@ function Consent() {
       <p className="mt-3 text-sm text-muted-foreground">
         This lets {clientName} browse the catalog and view your orders and wishlist as you.
       </p>
-      {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <div className="mt-8 flex gap-3">
         <button
           disabled={busy}

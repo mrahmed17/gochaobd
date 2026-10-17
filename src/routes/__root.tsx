@@ -27,7 +27,10 @@ function NotFoundComponent() {
           Looks like this shelf is empty. Let's get you back to shopping.
         </p>
         <div className="mt-6">
-          <Link to="/" className="inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-foreground"
+          >
             Back to home
           </Link>
         </div>
@@ -48,10 +51,18 @@ function ErrorComponent({ error, reset }: { error: unknown; reset: () => void })
         <h1 className="text-xl font-semibold">Something went wrong</h1>
         <p className="mt-2 text-sm text-muted-foreground">Please try again in a moment.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button onClick={() => { router.invalidate(); reset(); }} className="rounded-full bg-brand text-brand-foreground px-4 py-2 text-sm">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="rounded-full bg-brand text-brand-foreground px-4 py-2 text-sm"
+          >
             Try again
           </button>
-          <a href="/" className="rounded-full border px-4 py-2 text-sm">Home</a>
+          <a href="/" className="rounded-full border px-4 py-2 text-sm">
+            Home
+          </a>
         </div>
       </div>
     </div>
@@ -69,13 +80,39 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "GochaoBD" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:title", content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh" },
-      { name: "twitter:title", content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh" },
-      { name: "description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
-      { property: "og:description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
-      { name: "twitter:description", content: "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/05c06951-f5a2-441a-82a8-360d097f3a63/id-preview-4343c81d--08d07aa5-c70d-49dc-a9ab-0340e33dcf55.lovable.app-1783583625421.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/05c06951-f5a2-441a-82a8-360d097f3a63/id-preview-4343c81d--08d07aa5-c70d-49dc-a9ab-0340e33dcf55.lovable.app-1783583625421.png" },
+      {
+        property: "og:title",
+        content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh",
+      },
+      {
+        name: "twitter:title",
+        content: "GochaoBD — Home Organizers & Smart Home Essentials in Bangladesh",
+      },
+      {
+        name: "description",
+        content:
+          "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh.",
+      },
+      {
+        property: "og:description",
+        content:
+          "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Beautiful, affordable home organizers, kitchen accessories, storage solutions and smart home essentials. Cash on delivery across Bangladesh.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/05c06951-f5a2-441a-82a8-360d097f3a63/id-preview-4343c81d--08d07aa5-c70d-49dc-a9ab-0340e33dcf55.lovable.app-1783583625421.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/05c06951-f5a2-441a-82a8-360d097f3a63/id-preview-4343c81d--08d07aa5-c70d-49dc-a9ab-0340e33dcf55.lovable.app-1783583625421.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -90,7 +127,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@type": "Organization",
           name: "GochaoBD",
           url: "https://gochaobd.lovable.app",
-          description: "Home organizers, kitchen accessories, storage solutions and smart home essentials for Bangladeshi homes.",
+          description:
+            "Home organizers, kitchen accessories, storage solutions and smart home essentials for Bangladeshi homes.",
           areaServed: "BD",
         }),
       },
@@ -119,8 +157,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }

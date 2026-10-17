@@ -9,7 +9,10 @@ export const Route = createFileRoute("/store/$slug")({
   head: ({ params }) => ({
     meta: [
       { title: `${params.slug} store — GochaoBD` },
-      { name: "description", content: `Shop the GochaoBD ${params.slug} collection with cash on delivery across Bangladesh.` },
+      {
+        name: "description",
+        content: `Shop the GochaoBD ${params.slug} collection with cash on delivery across Bangladesh.`,
+      },
       { property: "og:title", content: `GochaoBD ${params.slug} store` },
       { property: "og:description", content: `Products from the GochaoBD ${params.slug} brand.` },
       { property: "og:type", content: "website" },
@@ -26,7 +29,9 @@ export const Route = createFileRoute("/store/$slug")({
     ]);
   },
   component: StorePage,
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>
+  ),
   notFoundComponent: () => <div className="p-6">Store not found</div>,
 });
 
@@ -41,22 +46,31 @@ function StorePage() {
     return (
       <AppShell>
         <div className="p-8 text-center text-sm text-muted-foreground">
-          This store doesn’t exist. <Link to="/stores" className="text-brand">See all brands</Link>
+          This store doesn’t exist.{" "}
+          <Link to="/stores" className="text-brand">
+            See all brands
+          </Link>
         </div>
       </AppShell>
     );
   }
 
-  const filtered = products.filter((p) => cat === "all" || p.category_id === cats.find((c) => c.slug === cat)?.id);
+  const filtered = products.filter(
+    (p) => cat === "all" || p.category_id === cats.find((c) => c.slug === cat)?.id,
+  );
 
   return (
     <AppShell>
       <div
         className="px-4 py-8 text-white"
-        style={{ background: `linear-gradient(135deg, ${store.theme_color}, ${store.accent_color})` }}
+        style={{
+          background: `linear-gradient(135deg, ${store.theme_color}, ${store.accent_color})`,
+        }}
       >
         <div className="mx-auto max-w-6xl">
-          <Link to="/stores" className="text-xs opacity-80">← All brands</Link>
+          <Link to="/stores" className="text-xs opacity-80">
+            ← All brands
+          </Link>
           <h1 className="mt-2 font-display text-3xl md:text-4xl">{store.name}</h1>
           <p className="text-sm opacity-90">{store.tagline}</p>
         </div>
@@ -67,15 +81,21 @@ function StorePage() {
 
         {cats.length > 0 && (
           <div className="mt-4 flex gap-2 overflow-x-auto -mx-4 px-4 pb-1">
-            <Chip active={cat === "all"} onClick={() => setCat("all")}>All</Chip>
+            <Chip active={cat === "all"} onClick={() => setCat("all")}>
+              All
+            </Chip>
             {cats.map((c) => (
-              <Chip key={c.id} active={cat === c.slug} onClick={() => setCat(c.slug)}>{c.name}</Chip>
+              <Chip key={c.id} active={cat === c.slug} onClick={() => setCat(c.slug)}>
+                {c.name}
+              </Chip>
             ))}
           </div>
         )}
 
         <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
+          {filtered.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
         </div>
 
         {!filtered.length && (
@@ -89,9 +109,20 @@ function StorePage() {
   );
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <button onClick={onClick} className={`shrink-0 rounded-full border px-4 py-1.5 text-sm ${active ? "bg-foreground text-background border-foreground" : "bg-background hover:bg-muted"}`}>
+    <button
+      onClick={onClick}
+      className={`shrink-0 rounded-full border px-4 py-1.5 text-sm ${active ? "bg-foreground text-background border-foreground" : "bg-background hover:bg-muted"}`}
+    >
       {children}
     </button>
   );

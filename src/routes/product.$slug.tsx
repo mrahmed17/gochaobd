@@ -3,25 +3,58 @@ import { useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useState } from "react";
 import { AppShell, Footer } from "@/components/AppShell";
 import { ProductCard } from "@/components/ProductCard";
-import { productBySlugQuery, productsQuery, resolveImage, variantsQuery, reviewsQuery } from "@/lib/queries";
+import {
+  productBySlugQuery,
+  productsQuery,
+  resolveImage,
+  variantsQuery,
+  reviewsQuery,
+} from "@/lib/queries";
 import { bdt } from "@/lib/format";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Star, Truck, ShieldCheck, CheckCircle2, Heart, Minus, Plus, Package, BellRing, Zap } from "lucide-react";
+import {
+  Star,
+  Truck,
+  ShieldCheck,
+  CheckCircle2,
+  Heart,
+  Minus,
+  Plus,
+  Package,
+  BellRing,
+  Zap,
+} from "lucide-react";
 import { QuickCheckout } from "@/components/QuickCheckout";
 import { whatsappLink } from "@/lib/contact";
 import { uploadReviewImage } from "@/lib/reviews.functions";
 import { MessageCircle, ImagePlus, X } from "lucide-react";
 
-
 export const Route = createFileRoute("/product/$slug")({
   head: ({ params, loaderData }) => {
-    const p = (loaderData as { product: { name: string; description: string | null; images: string[]; price_bdt: number; stock: number; rating: number; review_count: number } } | undefined)?.product;
+    const p = (
+      loaderData as
+        | {
+            product: {
+              name: string;
+              description: string | null;
+              images: string[];
+              price_bdt: number;
+              stock: number;
+              rating: number;
+              review_count: number;
+            };
+          }
+        | undefined
+    )?.product;
     const url = `https://gochaobd.lovable.app/product/${params.slug}`;
-    if (!p) return { meta: [{ title: "Product — GochaoBD" }], links: [{ rel: "canonical", href: url }] };
+    if (!p)
+      return { meta: [{ title: "Product — GochaoBD" }], links: [{ rel: "canonical", href: url }] };
     const img = resolveImage(p.images[0]);
-    const desc = (p.description ?? `${p.name} — available at GochaoBD with cash on delivery across Bangladesh.`).slice(0, 160);
+    const desc = (
+      p.description ?? `${p.name} — available at GochaoBD with cash on delivery across Bangladesh.`
+    ).slice(0, 160);
     return {
       meta: [
         { title: `${p.name} — GochaoBD` },
@@ -42,12 +75,16 @@ export const Route = createFileRoute("/product/$slug")({
             name: p.name,
             image: img,
             description: p.description ?? undefined,
-            aggregateRating: p.review_count > 0 ? { "@type": "AggregateRating", ratingValue: p.rating, reviewCount: p.review_count } : undefined,
+            aggregateRating:
+              p.review_count > 0
+                ? { "@type": "AggregateRating", ratingValue: p.rating, reviewCount: p.review_count }
+                : undefined,
             offers: {
               "@type": "Offer",
               price: p.price_bdt,
               priceCurrency: "BDT",
-              availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              availability:
+                p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
               url,
             },
           }),
@@ -62,9 +99,18 @@ export const Route = createFileRoute("/product/$slug")({
     await context.queryClient.ensureQueryData(productsQuery());
     return { product };
   },
-  errorComponent: ({ error }) => <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-destructive text-sm">Failed to load: {(error as Error).message}</div>
+  ),
   notFoundComponent: () => (
-    <AppShell><div className="p-8 text-center"><h1 className="font-display text-2xl">Product not found</h1><Link to="/shop" className="text-brand text-sm">Continue shopping</Link></div></AppShell>
+    <AppShell>
+      <div className="p-8 text-center">
+        <h1 className="font-display text-2xl">Product not found</h1>
+        <Link to="/shop" className="text-brand text-sm">
+          Continue shopping
+        </Link>
+      </div>
+    </AppShell>
   ),
 });
 
@@ -77,41 +123,109 @@ function ProductPage() {
   const [imgIdx, setImgIdx] = useState(0);
   const [variant, setVariant] = useState<string | null>(null);
   const [quick, setQuick] = useState(false);
-  const { data: variants = [] } = useQuery({ ...variantsQuery(product?.id ?? ""), enabled: !!product });
+  const { data: variants = [] } = useQuery({
+    ...variantsQuery(product?.id ?? ""),
+    enabled: !!product,
+  });
+  // ---- Bundle deal: admin-configured pairs get a real discount -------------
+  // (hooks must run before the early return below)
+  const { data: bundles = [] } = useQuery({
+    queryKey: ["bundles", product?.id ?? ""],
+    enabled: !!product,
+    queryFn: async () => {
+      if (!product) return [];
+      const { data } = await supabase
+        .from("product_bundles")
+        .select("product_id, with_product_id, discount_bdt")
+        .eq("active", true)
+        .or(`product_id.eq.${product.id},with_product_id.eq.${product.id}`);
+      return data ?? [];
+    },
+  });
   if (!product) return null;
   const chosen = variants.find((v) => v.label === variant) ?? null;
-  const base = product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
+  const base =
+    product.is_flash_sale && product.flash_price_bdt ? product.flash_price_bdt : product.price_bdt;
   const price = base + (chosen?.price_delta_bdt ?? 0);
   const stock = chosen ? chosen.stock : product.stock;
-  const related = all.filter((p) => p.id !== product.id && p.category_id === product.category_id).slice(0, 4);
-  const fbt = all.filter((p) => p.id !== product.id).slice(0, 2);
+  const related = all
+    .filter((p) => p.id !== product.id && p.category_id === product.category_id)
+    .slice(0, 4);
+
+  const bundleRows = bundles.filter(
+    (b) => b.product_id === product.id || b.with_product_id === product.id,
+  );
+  const bundlePartners = bundleRows
+    .map((b) => {
+      const partnerId = b.product_id === product.id ? b.with_product_id : b.product_id;
+      return { partner: all.find((p) => p.id === partnerId) ?? null, discount: b.discount_bdt };
+    })
+    .filter((x) => x.partner && x.discount > 0)
+    .slice(0, 2);
+  const bundleTotalDiscount = bundlePartners.reduce((s, x) => s + x.discount, 0);
+  // Fallback: generic suggestions when no bundle is configured for this product.
+  const fbt = bundlePartners.length ? [] : all.filter((p) => p.id !== product.id).slice(0, 2);
   const images = product.images.length ? product.images : [""];
 
   function addToCart() {
-    if (variants.length && !variant) { toast.error("Please select an option"); return; }
-    if (stock <= 0) { toast.error("Out of stock"); return; }
-    cart.add({ id: product!.id, slug: product!.slug, name: product!.name, price, image: images[imgIdx] ?? images[0], variant }, qty);
+    if (variants.length && !variant) {
+      toast.error("Please select an option");
+      return;
+    }
+    if (stock <= 0) {
+      toast.error("Out of stock");
+      return;
+    }
+    cart.add(
+      {
+        id: product!.id,
+        slug: product!.slug,
+        name: product!.name,
+        price,
+        image: images[imgIdx] ?? images[0],
+        variant,
+        stock,
+      },
+      qty,
+    );
   }
   function buyNow() {
-    if (variants.length && !variant) { toast.error("Please select an option"); return; }
-    if (stock <= 0) { toast.error("Out of stock"); return; }
+    if (variants.length && !variant) {
+      toast.error("Please select an option");
+      return;
+    }
+    if (stock <= 0) {
+      toast.error("Out of stock");
+      return;
+    }
     setQuick(true);
   }
 
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl px-4 py-4">
-        <nav className="text-xs text-muted-foreground mb-3"><Link to="/shop">Shop</Link> / <span className="text-foreground">{product.name}</span></nav>
+        <nav className="text-xs text-muted-foreground mb-3">
+          <Link to="/shop">Shop</Link> / <span className="text-foreground">{product.name}</span>
+        </nav>
 
         <div className="grid md:grid-cols-2 gap-6">
           <div>
             <div className="rounded-3xl overflow-hidden bg-muted border aspect-square">
-              <img src={resolveImage(images[imgIdx])} alt={product.name} className="h-full w-full object-cover" />
+              <img
+                src={resolveImage(images[imgIdx])}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
             </div>
             {images.length > 1 && (
               <div className="mt-2 flex gap-2 overflow-x-auto">
                 {images.map((im, i) => (
-                  <button key={im + i} onClick={() => setImgIdx(i)} aria-label={`View image ${i + 1}`} className={`h-16 w-16 shrink-0 rounded-xl overflow-hidden border ${i === imgIdx ? "ring-2 ring-brand" : ""}`}>
+                  <button
+                    key={im + i}
+                    onClick={() => setImgIdx(i)}
+                    aria-label={`View image ${i + 1}`}
+                    className={`h-16 w-16 shrink-0 rounded-xl overflow-hidden border ${i === imgIdx ? "ring-2 ring-brand" : ""}`}
+                  >
                     <img src={resolveImage(im)} alt="" className="h-full w-full object-cover" />
                   </button>
                 ))}
@@ -122,11 +236,12 @@ function ProductPage() {
             )}
           </div>
 
-
           <div>
             <div className="flex items-center gap-2 text-xs">
               {stock > 0 ? (
-                <span className="inline-flex items-center gap-1 text-brand font-medium"><CheckCircle2 className="h-3 w-3" /> In stock ({stock})</span>
+                <span className="inline-flex items-center gap-1 text-brand font-medium">
+                  <CheckCircle2 className="h-3 w-3" /> In stock ({stock})
+                </span>
               ) : (
                 <span className="text-destructive font-medium">Out of stock</span>
               )}
@@ -141,7 +256,9 @@ function ProductPage() {
             <div className="mt-4 flex items-baseline gap-3">
               <span className="text-3xl font-display">{bdt(price)}</span>
               {product.compare_price_bdt && product.compare_price_bdt > price && (
-                <span className="text-muted-foreground line-through">{bdt(product.compare_price_bdt)}</span>
+                <span className="text-muted-foreground line-through">
+                  {bdt(product.compare_price_bdt)}
+                </span>
               )}
             </div>
 
@@ -156,7 +273,8 @@ function ProductPage() {
                       disabled={v.stock <= 0}
                       className={`rounded-full border px-4 py-2 text-sm disabled:opacity-40 disabled:line-through ${variant === v.label ? "border-brand bg-brand-soft/40 font-medium" : ""}`}
                     >
-                      {v.label}{v.price_delta_bdt ? ` (+${bdt(v.price_delta_bdt)})` : ""}
+                      {v.label}
+                      {v.price_delta_bdt ? ` (+${bdt(v.price_delta_bdt)})` : ""}
                     </button>
                   ))}
                 </div>
@@ -164,16 +282,40 @@ function ProductPage() {
             )}
 
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex items-center gap-2"><Truck className="h-4 w-4 text-brand" /> Delivery in {product.delivery_days ?? "2–5 days"}</div>
-              {product.cod_available && <div className="flex items-center gap-2"><Package className="h-4 w-4 text-brand" /> Cash on Delivery available</div>}
-              <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand" /> 7-day easy returns</div>
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-brand" /> Delivery in{" "}
+                {product.delivery_days ?? "2–5 days"}
+              </div>
+              {product.cod_available && (
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-brand" /> Cash on Delivery available
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-brand" /> 7-day easy returns
+              </div>
             </div>
 
             <div className="mt-5 flex items-center gap-3">
               <div className="inline-flex items-center rounded-full border">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="h-11 w-11 grid place-items-center" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
-                <span className="w-10 text-center font-medium" aria-live="polite">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} className="h-11 w-11 grid place-items-center" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="h-11 w-11 grid place-items-center"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-10 text-center font-medium" aria-live="polite">
+                  {qty}
+                </span>
+                <button
+                  onClick={() => setQty((q) => Math.max(1, Math.min(stock, q + 1)))}
+                  disabled={qty >= stock}
+                  className="h-11 w-11 grid place-items-center disabled:opacity-40"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
               </div>
               <button
                 onClick={addToCart}
@@ -182,8 +324,16 @@ function ProductPage() {
               >
                 Add to cart
               </button>
-              <button onClick={() => cart.toggleWish(product.id)} className="h-12 w-12 grid place-items-center rounded-full border" aria-label={cart.inWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}>
-                <Heart className={`h-5 w-5 ${cart.inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`} />
+              <button
+                onClick={() => cart.toggleWish(product.id)}
+                className="h-12 w-12 grid place-items-center rounded-full border"
+                aria-label={
+                  cart.inWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"
+                }
+              >
+                <Heart
+                  className={`h-5 w-5 ${cart.inWishlist(product.id) ? "fill-accent-orange text-accent-orange" : ""}`}
+                />
               </button>
             </div>
             <button
@@ -194,41 +344,128 @@ function ProductPage() {
               <Zap className="h-4 w-4" /> Buy Now — এখনই কিনুন
             </button>
             <a
-              href={whatsappLink(`আমি এই পণ্যটি অর্ডার করতে চাই:\n${product.name}${variant ? ` (${variant})` : ""}\nপরিমাণ: ${qty}\nদাম: ${bdt(price)}\n${typeof window !== "undefined" ? window.location.href : ""}`)}
-              target="_blank" rel="noreferrer"
+              href={whatsappLink(
+                `আমি এই পণ্যটি অর্ডার করতে চাই:\n${product.name}${variant ? ` (${variant})` : ""}\nপরিমাণ: ${qty}\nদাম: ${bdt(price)}\n${typeof window !== "undefined" ? window.location.href : ""}`,
+              )}
+              target="_blank"
+              rel="noreferrer"
               className="mt-3 w-full rounded-full border-2 border-brand text-brand py-3 text-sm font-semibold inline-flex items-center justify-center gap-2"
             >
               <MessageCircle className="h-4 w-4" /> Order via WhatsApp
             </a>
-            <QuickCheckout open={quick} onOpenChange={setQuick} item={{ productId: product.id, name: product.name, price, image: images[imgIdx] ?? images[0], variant, qty }} />
+            <QuickCheckout
+              open={quick}
+              onOpenChange={setQuick}
+              item={{
+                productId: product.id,
+                name: product.name,
+                price,
+                image: images[imgIdx] ?? images[0],
+                variant,
+                qty,
+              }}
+            />
 
             {stock <= 0 && <StockAlert productId={product.id} />}
-
 
             {product.description && (
               <details open className="mt-6 border-t pt-4">
                 <summary className="font-semibold cursor-pointer">Description</summary>
-                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">{product.description}</p>
+                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
+                  {product.description}
+                </p>
               </details>
             )}
             {product.specs && (
               <details className="mt-3 border-t pt-4">
                 <summary className="font-semibold cursor-pointer">Specifications</summary>
-                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">{product.specs}</p>
+                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
+                  {product.specs}
+                </p>
               </details>
             )}
           </div>
         </div>
 
+        {bundlePartners.length > 0 && (
+          <section className="mt-10 rounded-3xl border-2 border-accent-orange/60 p-5">
+            <h2 className="font-display text-xl">Bundle deal 🔥</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              এই পণ্যের সাথে নিন — চেকআউটে সরাসরি{" "}
+              <b className="text-accent-orange">-{bdt(bundleTotalDiscount)}</b> ছাড় যোগ হবে।
+            </p>
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 items-center">
+              <div>
+                <ProductCard product={product} />
+              </div>
+              {bundlePartners.map(({ partner }) => (
+                <div key={partner!.id}>
+                  <ProductCard product={partner!} />
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  cart.add({
+                    id: product.id,
+                    slug: product.slug,
+                    name: product.name,
+                    price:
+                      product.is_flash_sale && product.flash_price_bdt
+                        ? product.flash_price_bdt
+                        : product.price_bdt,
+                    image: product.images[0],
+                    stock: product.stock,
+                  });
+                  bundlePartners.forEach(({ partner }) => {
+                    if (partner)
+                      cart.add({
+                        id: partner.id,
+                        slug: partner.slug,
+                        name: partner.name,
+                        price:
+                          partner.is_flash_sale && partner.flash_price_bdt
+                            ? partner.flash_price_bdt
+                            : partner.price_bdt,
+                        image: partner.images[0],
+                        stock: partner.stock,
+                      });
+                  });
+                  toast.success(`Bundle added · discount applies at checkout`);
+                }}
+                className="rounded-2xl bg-accent-orange text-accent-orange-foreground py-4 text-sm font-medium px-2 text-center"
+              >
+                Add bundle
+                <br />
+                <span className="text-xs">save {bdt(bundleTotalDiscount)}</span>
+              </button>
+            </div>
+          </section>
+        )}
+
         {fbt.length > 0 && (
           <section className="mt-10 rounded-3xl border p-5">
             <h2 className="font-display text-xl">Frequently bought together</h2>
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 items-center">
-              <div><ProductCard product={product} /></div>
-              {fbt.map((p) => <div key={p.id}><ProductCard product={p} /></div>)}
+              <div>
+                <ProductCard product={product} />
+              </div>
+              {fbt.map((p) => (
+                <div key={p.id}>
+                  <ProductCard product={p} />
+                </div>
+              ))}
               <button
                 onClick={() => {
-                  [product, ...fbt].forEach((p) => cart.add({ id: p.id, slug: p.slug, name: p.name, price: p.price_bdt, image: p.images[0] }));
+                  [product, ...fbt].forEach((p) =>
+                    cart.add({
+                      id: p.id,
+                      slug: p.slug,
+                      name: p.name,
+                      price: p.price_bdt,
+                      image: p.images[0],
+                      stock: p.stock,
+                    }),
+                  );
                 }}
                 className="md:col-span-1 rounded-2xl bg-accent-orange text-accent-orange-foreground py-4 text-sm font-medium"
               >
@@ -240,13 +477,13 @@ function ProductPage() {
 
         <Reviews productId={product.id} slug={product.slug} />
 
-
-
         {related.length > 0 && (
           <section className="mt-10">
             <h2 className="font-display text-xl md:text-2xl">You may also like</h2>
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {related.map((p) => <ProductCard key={p.id} product={p} />)}
+              {related.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
             </div>
           </section>
         )}
@@ -267,17 +504,30 @@ function StockAlert({ productId }: { productId: string }) {
       email: isEmail ? contact : null,
       phone: isEmail ? null : contact,
     });
-    if (error) { toast.error("Could not save. Try again."); return; }
+    if (error) {
+      toast.error("Could not save. Try again.");
+      return;
+    }
     setDone(true);
     toast.success("We'll notify you when it's back!");
   }
   if (done) return <p className="mt-4 text-sm text-brand">You're on the notify list ✓</p>;
   return (
     <form onSubmit={submit} className="mt-4 rounded-2xl border p-3 bg-card">
-      <div className="flex items-center gap-2 text-sm font-medium"><BellRing className="h-4 w-4 text-accent-orange" /> Notify me when back in stock</div>
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <BellRing className="h-4 w-4 text-accent-orange" /> Notify me when back in stock
+      </div>
       <div className="mt-2 flex gap-2">
-        <input required value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Email or phone" className="flex-1 rounded-full border px-3 py-2 text-sm bg-background" />
-        <button className="rounded-full bg-brand text-brand-foreground px-4 text-sm">Notify me</button>
+        <input
+          required
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          placeholder="Email or phone"
+          className="flex-1 rounded-full border px-3 py-2 text-sm bg-background"
+        />
+        <button className="rounded-full bg-brand text-brand-foreground px-4 text-sm">
+          Notify me
+        </button>
       </div>
     </form>
   );
@@ -295,17 +545,31 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
   async function addPhotos(files: FileList | null) {
     if (!files?.length) return;
     const { data: u } = await supabase.auth.getUser();
-    if (!u.user) { toast.error("Please sign in to add photos"); return; }
+    if (!u.user) {
+      toast.error("Please sign in to add photos");
+      return;
+    }
     setUploading(true);
     try {
       for (const f of Array.from(files).slice(0, 4 - photos.length)) {
-        if (f.size > 4 * 1024 * 1024) { toast.error(`${f.name}: max 4 MB`); continue; }
-        const base64 = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(f); });
+        if (f.size > 4 * 1024 * 1024) {
+          toast.error(`${f.name}: max 4 MB`);
+          continue;
+        }
+        const base64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(String(r.result).split(",")[1]);
+          r.onerror = rej;
+          r.readAsDataURL(f);
+        });
         const { url } = await uploadReviewImage({ data: { contentType: f.type, base64 } });
         setPhotos((p) => [...p, url].slice(0, 4));
       }
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Upload failed"); }
-    finally { setUploading(false); }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -313,11 +577,15 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { toast.error("Please sign in to write a review"); return; }
+      if (!u.user) {
+        toast.error("Please sign in to write a review");
+        return;
+      }
       const { error } = await supabase.from("reviews").insert({
         product_id: productId,
         user_id: u.user.id,
-        author_name: (u.user.user_metadata?.full_name as string) || u.user.email?.split("@")[0] || "Customer",
+        author_name:
+          (u.user.user_metadata?.full_name as string) || u.user.email?.split("@")[0] || "Customer",
         rating,
         comment: comment.trim() || null,
         images: photos,
@@ -341,30 +609,70 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
       <form onSubmit={submit} className="mt-4 rounded-2xl border p-4 bg-card">
         <div className="flex items-center gap-1">
           {[1, 2, 3, 4, 5].map((n) => (
-            <button type="button" key={n} onClick={() => setRating(n)} aria-label={`Rate ${n} star`}>
-              <Star className={`h-6 w-6 ${n <= rating ? "fill-accent-orange text-accent-orange" : "text-muted-foreground"}`} />
+            <button
+              type="button"
+              key={n}
+              onClick={() => setRating(n)}
+              aria-label={`Rate ${n} star`}
+            >
+              <Star
+                className={`h-6 w-6 ${n <= rating ? "fill-accent-orange text-accent-orange" : "text-muted-foreground"}`}
+              />
             </button>
           ))}
         </div>
-        <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Share your experience…" className="mt-3 w-full rounded-xl border px-3 py-2 text-sm bg-background" />
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={3}
+          placeholder="Share your experience…"
+          className="mt-3 w-full rounded-xl border px-3 py-2 text-sm bg-background"
+        />
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {photos.map((u, i) => (
             <div key={u} className="relative h-16 w-16">
               <img src={u} alt="" className="h-16 w-16 rounded-lg object-cover" />
-              <button type="button" onClick={() => setPhotos(photos.filter((_, j) => j !== i))} className="absolute -top-1 -right-1 rounded-full bg-background border p-0.5" aria-label="Remove photo"><X className="h-3 w-3" /></button>
+              <button
+                type="button"
+                onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
+                className="absolute -top-1 -right-1 rounded-full bg-background border p-0.5"
+                aria-label="Remove photo"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
           ))}
           {photos.length < 4 && (
             <label className="h-16 px-3 rounded-lg border border-dashed grid place-items-center text-xs text-muted-foreground cursor-pointer">
-              <span className="inline-flex items-center gap-1"><ImagePlus className="h-4 w-4" />{uploading ? "Uploading…" : "Add photos"}</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden disabled={uploading} onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+              <span className="inline-flex items-center gap-1">
+                <ImagePlus className="h-4 w-4" />
+                {uploading ? "Uploading…" : "Add photos"}
+              </span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                hidden
+                disabled={uploading}
+                onChange={(e) => {
+                  addPhotos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
             </label>
           )}
         </div>
-        <button disabled={busy || uploading} className="mt-2 rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm disabled:opacity-60">Post review</button>
+        <button
+          disabled={busy || uploading}
+          className="mt-2 rounded-full bg-brand text-brand-foreground px-5 py-2 text-sm disabled:opacity-60"
+        >
+          Post review
+        </button>
       </form>
       <ul className="mt-4 space-y-3">
-        {reviews.length === 0 && <li className="text-sm text-muted-foreground">No reviews yet — be the first!</li>}
+        {reviews.length === 0 && (
+          <li className="text-sm text-muted-foreground">No reviews yet — be the first!</li>
+        )}
         {reviews.map((r) => (
           <li key={r.id} className="rounded-2xl border p-4">
             <div className="flex items-center justify-between">
@@ -374,10 +682,21 @@ function Reviews({ productId, slug }: { productId: string; slug: string }) {
             {r.comment && <p className="mt-1 text-sm text-muted-foreground">{r.comment}</p>}
             {r.images?.length > 0 && (
               <div className="mt-2 flex gap-2 flex-wrap">
-                {r.images.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="Customer photo" loading="lazy" className="h-20 w-20 rounded-lg object-cover" /></a>)}
+                {r.images.map((u) => (
+                  <a key={u} href={u} target="_blank" rel="noreferrer">
+                    <img
+                      src={u}
+                      alt="Customer photo"
+                      loading="lazy"
+                      className="h-20 w-20 rounded-lg object-cover"
+                    />
+                  </a>
+                ))}
               </div>
             )}
-            <time className="mt-1 block text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</time>
+            <time className="mt-1 block text-xs text-muted-foreground">
+              {new Date(r.created_at).toLocaleDateString()}
+            </time>
           </li>
         ))}
       </ul>
