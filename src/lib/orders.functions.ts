@@ -320,26 +320,10 @@ export const placeOrder = createServerFn({ method: "POST" })
       .from("order_items")
       .insert(lines.map((l) => ({ ...l, order_id: order.id })));
     if (iErr) {
+      // Stock is reserved atomically per line; roll back the order if any line can't be fulfilled.
       await supabaseAdmin.from("orders").delete().eq("id", order.id);
-      await supabaseAdmin.rpc("restore_stock", { p_items: claimItems });
-      throw new Error(iErr.message);
-    }
-
-    // Update the phone's lifetime counters so the fraud score keeps learning.
-    if (phone && /^01[3-9]\d{8}$/.test(phone)) {
-      const { data: existing } = await supabaseAdmin
-        .from("phone_risk")
-        .select("phone, order_count")
-        .eq("phone", phone)
-        .maybeSingle();
-      if (existing) {
-        await supabaseAdmin
-          .from("phone_risk")
-          .update({ order_count: existing.order_count + 1, updated_at: new Date().toISOString() })
-          .eq("phone", phone);
-      } else {
-        await supabaseAdmin.from("phone_risk").insert({ phone, order_count: 1 });
-      }
+      const m = /OUT_OF_STOCK: (.*)/.exec(iErr.message);
+      throw new Error(m ? `দুঃখিত, "${m[1]}" পর্যাপ্ত স্টকে নেই। পরিমাণ কমিয়ে আবার চেষ্টা করুন।` : "Could not place order");
     }
 
     const recipient = userEmail ?? (data.customer.email || data.customer.phone);

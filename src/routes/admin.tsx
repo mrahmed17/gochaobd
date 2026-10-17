@@ -326,6 +326,17 @@ function AdminPage() {
     }
   }
 
+  const [bulkSel, setBulkSel] = useState<string[]>([]);
+  async function bulkStatus(status: string) {
+    if (status === "cancelled" && !confirm(`Cancel ${bulkSel.length} orders? Stock will be returned.`)) return;
+    let ok = 0;
+    for (const id of bulkSel) {
+      try { await updateOrderStatus({ data: { id, status: status as any } }); ok++; } catch { /* counted below */ }
+    }
+    toast.success(`${ok}/${bulkSel.length} orders marked ${status}`);
+    setBulkSel([]); reload();
+  }
+
   async function setPayment(id: string, payment_status: "paid" | "failed") {
     try {
       await updatePaymentStatus({ data: { id, payment_status } });
@@ -671,230 +682,74 @@ function AdminPage() {
 
         {tab === "orders" && (
           <div className="mt-6 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={orderQ}
-                onChange={(e) => setOrderQ(e.target.value)}
-                placeholder="Search order no, name, phone or tracking"
-                aria-label="Search orders"
-                className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background"
-              />
-              <select
-                value={orderFilter}
-                onChange={(e) => setOrderFilter(e.target.value)}
-                aria-label="Filter by status"
-                className="rounded-xl border px-3 py-2 text-sm bg-background"
-              >
-                {[
-                  "all",
-                  "pending",
-                  "confirmed",
-                  "shipped",
-                  "delivered",
-                  "returned",
-                  "cancelled",
-                ].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={payFilter}
-                onChange={(e) => setPayFilter(e.target.value)}
-                aria-label="Filter by payment"
-                className="rounded-xl border px-3 py-2 text-sm bg-background"
-              >
-                {["all", "cod", "awaiting", "verifying", "paid", "failed"].map((s) => (
-                  <option key={s} value={s}>
-                    {s === "all" ? "all payments" : s}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={zoneFilter}
-                onChange={(e) => setZoneFilter(e.target.value)}
-                aria-label="Filter by zone"
-                className="rounded-xl border px-3 py-2 text-sm bg-background"
-              >
-                <option value="all">all zones</option>
-                {[...new Set(orders.map((o) => o.delivery_zone))].map((z) => (
-                  <option key={z} value={z}>
-                    {z}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={orderFrom}
-                onChange={(e) => setOrderFrom(e.target.value)}
-                aria-label="From date"
-                className="rounded-xl border px-3 py-2 text-sm bg-background"
-              />
-              <input
-                type="date"
-                value={orderTo}
-                onChange={(e) => setOrderTo(e.target.value)}
-                aria-label="To date"
-                className="rounded-xl border px-3 py-2 text-sm bg-background"
-              />
+          <div className="flex flex-wrap gap-2">
+            <input value={orderQ} onChange={(e) => setOrderQ(e.target.value)} placeholder="Search order no, name, phone or tracking" aria-label="Search orders" className="flex-1 min-w-48 rounded-xl border px-3 py-2 text-sm bg-background" />
+            <select value={orderFilter} onChange={(e) => setOrderFilter(e.target.value)} aria-label="Filter by status" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              {["all", "pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} aria-label="Filter by payment" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              {["all", "cod", "awaiting", "verifying", "paid", "failed"].map((s) => <option key={s} value={s}>{s === "all" ? "all payments" : s}</option>)}
+            </select>
+            <select value={zoneFilter} onChange={(e) => setZoneFilter(e.target.value)} aria-label="Filter by zone" className="rounded-xl border px-3 py-2 text-sm bg-background">
+              <option value="all">all zones</option>
+              {[...new Set(orders.map((o) => o.delivery_zone))].map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
+            <input type="date" value={orderFrom} onChange={(e) => setOrderFrom(e.target.value)} aria-label="From date" className="rounded-xl border px-3 py-2 text-sm bg-background" />
+            <input type="date" value={orderTo} onChange={(e) => setOrderTo(e.target.value)} aria-label="To date" className="rounded-xl border px-3 py-2 text-sm bg-background" />
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => (
+              <button key={s} onClick={() => setOrderFilter(orderFilter === s ? "all" : s)} className={`rounded-full border px-3 py-1 capitalize ${orderFilter === s ? "bg-brand text-brand-foreground" : "bg-card"}`}>{s} · {orders.filter((o) => o.status === s).length}</button>
+            ))}
+          </div>
+          {bulkSel.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-brand-soft/30 px-3 py-2 text-sm">
+              <span className="font-medium">{bulkSel.length} selected</span>
+              {["confirmed", "shipped", "delivered", "cancelled"].map((s) => (
+                <button key={s} onClick={() => bulkStatus(s)} className="rounded-full border bg-background px-3 py-1 text-xs capitalize">Mark {s}</button>
+              ))}
+              <button onClick={() => setBulkSel([])} className="ml-auto text-xs underline">Clear</button>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {["pending", "confirmed", "shipped", "delivered", "returned", "cancelled"].map(
-                (s) => (
-                  <button
-                    key={s}
-                    onClick={() => setOrderFilter(orderFilter === s ? "all" : s)}
-                    className={`rounded-full border px-3 py-1 capitalize ${orderFilter === s ? "bg-brand text-brand-foreground" : "bg-card"}`}
-                  >
-                    {s} · {orders.filter((o) => o.status === s).length}
-                  </button>
-                ),
-              )}
-            </div>
-            {selected.size > 0 && (
-              <div className="sticky top-16 z-10 flex flex-wrap items-center gap-2 rounded-2xl border-2 border-brand bg-brand-soft/30 p-3 text-sm">
-                <span className="font-semibold">{selected.size} অর্ডার সিলেক্ট করা আছে</span>
-                <button
-                  disabled={bulkBusy}
-                  onClick={() =>
-                    runBulk(
-                      (ids) =>
-                        bulkDispatchToCourier({ data: { orderIds: ids, courier: "Steadfast" } }),
-                      "Steadfast-এ পাঠানো হয়েছে",
-                    )
-                  }
-                  className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50"
-                >
-                  🚚 Send to Steadfast
-                </button>
-                <button
-                  disabled={bulkBusy}
-                  onClick={() =>
-                    runBulk(
-                      (ids) =>
-                        bulkDispatchToCourier({ data: { orderIds: ids, courier: "Pathao" } }),
-                      "Pathao-তে পাঠানো হয়েছে",
-                    )
-                  }
-                  className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50"
-                >
-                  🚚 Send to Pathao
-                </button>
-                <button
-                  disabled={bulkBusy}
-                  onClick={() =>
-                    runBulk(
-                      (ids) => bulkUpdateOrderStatus({ data: { ids, status: "shipped" } }),
-                      "Marked as shipped",
-                    )
-                  }
-                  className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50"
-                >
-                  ✓ Mark as shipped
-                </button>
-                <button
-                  disabled={bulkBusy}
-                  onClick={() =>
-                    runBulk(
-                      (ids) => bulkUpdateOrderStatus({ data: { ids, status: "confirmed" } }),
-                      "Marked as confirmed",
-                    )
-                  }
-                  className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50"
-                >
-                  ✓ Mark as confirmed
-                </button>
-                <button
-                  disabled={bulkBusy}
-                  onClick={async () => {
-                    const ids = [...selected];
-                    const rows = orders.filter((o) => ids.includes(o.id));
-                    const entries = await Promise.all(
-                      rows.map(async (o) => ({
-                        order: o,
-                        items:
-                          orderItems[o.id] ?? (await getOrderItems({ data: { orderId: o.id } })),
-                      })),
-                    );
-                    entries.forEach((e, i) =>
-                      setTimeout(() => printInvoice(e.order, e.items, "pos"), i * 300),
-                    );
-                  }}
-                  className="rounded-full border bg-background px-3 py-1.5 font-medium disabled:opacity-50"
-                >
-                  🧾 Print POS slips
-                </button>
-                <button
-                  disabled={bulkBusy}
-                  onClick={() => setSelected(new Set())}
-                  className="ml-auto text-muted-foreground underline"
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-            <div className="rounded-2xl border overflow-x-auto bg-card">
-              <table className="w-full text-sm">
-                <thead className="bg-muted text-left">
+          )}
+          <div className="rounded-2xl border overflow-x-auto bg-card">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-left">
+                <tr><th className="p-3">Order</th><th className="p-3">Customer</th><th className="p-3">Total</th><th className="p-3">Status</th></tr>
+              </thead>
+              <tbody className="divide-y">
+                {orders.filter((o) => {
+                  if (orderFilter !== "all" && o.status !== orderFilter) return false;
+                  if (payFilter === "cod" ? o.payment_method !== "cod" : payFilter !== "all" && (o.payment_method === "cod" || o.payment_status !== payFilter)) return false;
+                  if (zoneFilter !== "all" && o.delivery_zone !== zoneFilter) return false;
+                  const d = o.created_at.slice(0, 10);
+                  if (orderFrom && d < orderFrom) return false;
+                  if (orderTo && d > orderTo) return false;
+                  return `${o.order_number} ${o.customer_name} ${o.customer_phone} ${o.tracking_number ?? ""}`.toLowerCase().includes(orderQ.toLowerCase());
+                }).map((o) => (
+                  <Fragment key={o.id}>
                   <tr>
-                    <th className="p-3 w-10">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all orders"
-                        checked={
-                          selected.size > 0 &&
-                          orders
-                            .filter((o) => {
-                              if (orderFilter !== "all" && o.status !== orderFilter) return false;
-                              if (
-                                payFilter === "cod"
-                                  ? o.payment_method !== "cod"
-                                  : payFilter !== "all" &&
-                                    (o.payment_method === "cod" || o.payment_status !== payFilter)
-                              )
-                                return false;
-                              if (zoneFilter !== "all" && o.delivery_zone !== zoneFilter)
-                                return false;
-                              const d = o.created_at.slice(0, 10);
-                              if (orderFrom && d < orderFrom) return false;
-                              if (orderTo && d > orderTo) return false;
-                              return `${o.order_number} ${o.customer_name} ${o.customer_phone} ${o.tracking_number ?? ""}`
-                                .toLowerCase()
-                                .includes(orderQ.toLowerCase());
-                            })
-                            .every((o) => selected.has(o.id))
-                        }
-                        onChange={(e) => {
-                          const visible = orders.filter((o) => {
-                            if (orderFilter !== "all" && o.status !== orderFilter) return false;
-                            if (
-                              payFilter === "cod"
-                                ? o.payment_method !== "cod"
-                                : payFilter !== "all" &&
-                                  (o.payment_method === "cod" || o.payment_status !== payFilter)
-                            )
-                              return false;
-                            if (zoneFilter !== "all" && o.delivery_zone !== zoneFilter)
-                              return false;
-                            const d = o.created_at.slice(0, 10);
-                            if (orderFrom && d < orderFrom) return false;
-                            if (orderTo && d > orderTo) return false;
-                            return `${o.order_number} ${o.customer_name} ${o.customer_phone} ${o.tracking_number ?? ""}`
-                              .toLowerCase()
-                              .includes(orderQ.toLowerCase());
-                          });
-                          setSelected(
-                            e.target.checked ? new Set(visible.map((o) => o.id)) : new Set(),
-                          );
-                        }}
-                        className="h-4 w-4 accent-[--color-brand]"
-                      />
-                    </th>
-                    <th className="p-3">Order</th>
-                    <th className="p-3">Customer</th>
-                    <th className="p-3">Total</th>
-                    <th className="p-3">Status</th>
+                    <td className="p-3 font-mono text-xs"><input type="checkbox" aria-label={`Select ${o.order_number}`} checked={bulkSel.includes(o.id)} onChange={(e) => setBulkSel(e.target.checked ? [...bulkSel, o.id] : bulkSel.filter((x) => x !== o.id))} className="mr-2 align-middle" />{o.order_number}<div className="text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</div>
+                      <button onClick={() => toggleOrder(o.id)} className="mt-1 font-sans text-brand underline">{openOrder === o.id ? "Hide details" : "Details"}</button>
+                    </td>
+                    <td className="p-3">{o.customer_name}<div className="text-xs text-muted-foreground">{o.customer_phone}</div></td>
+                    <td className="p-3 font-semibold">{bdt(o.total_bdt)}
+                      {o.payment_method !== "cod" && (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {o.payment_method} · {o.payment_status}{o.payment_ref ? ` · ${o.payment_ref}` : ""}
+                          {o.payment_status === "verifying" && (
+                            <span className="ml-1 inline-flex gap-1">
+                              <button onClick={() => setPayment(o.id, "paid")} className="text-brand underline">Mark paid</button>
+                              <button onClick={() => setPayment(o.id, "failed")} className="text-destructive underline">Reject</button>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <select value={o.status} onChange={(e) => updateStatus(o.id, e.target.value)} aria-label="Order status" className="rounded-full border px-2 py-1 text-xs bg-background">
+                        {["pending", "confirmed", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
